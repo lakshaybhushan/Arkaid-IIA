@@ -1,0 +1,8 @@
+*.zip
+.DS_Store
+/bkup
+/datasets
+/oldmaybe
+/matchmatix
+ETL/data_sources
+arkaid_api/

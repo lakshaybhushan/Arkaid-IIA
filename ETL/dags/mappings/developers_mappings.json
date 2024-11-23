@@ -1,0 +1,14 @@
+{
+    "source_table": "developers",
+    "source_type": "csv",
+    "destination_table": "mv_developers",
+    "column_mappings": {
+        "developer_id": "MD5(developer)",
+        "developer_name": "developer",
+        "active": "CASE WHEN active = '1' THEN true WHEN active = '0' THEN false END",
+        "city": "city",
+        "country": "country",
+        "established_year": "TO_CHAR(established_date::date, 'YYYY-MM-DD')",
+        "notable_games": "notable_games"
+    }
+} 

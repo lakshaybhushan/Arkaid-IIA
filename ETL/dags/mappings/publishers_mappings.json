@@ -1,0 +1,13 @@
+{
+    "source_table": "publishers",
+    "source_type": "csv",
+    "destination_table": "mv_publishers",
+    "column_mappings": {
+        "publisher_id": "MD5(publisher)",
+        "publisher_name": "publisher",
+        "active": "CASE WHEN active = '1' THEN true WHEN active = '0' THEN false END",
+        "headquarters": "headquarters",
+        "established_year": "TO_CHAR(established_date::date, 'YYYY-MM-DD')",
+        "notable_games_published": "notable_games"
+    }
+} 

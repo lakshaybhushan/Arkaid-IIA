@@ -1,0 +1,12 @@
+{
+    "source_table": "modders",
+    "source_type": "csv",
+    "destination_table": "mv_modders",
+    "column_mappings": {
+        "modder_id": "id",
+        "name": "name",
+        "primary_game_id": "primary_game_id",
+        "mod_type": "type_of_mod",
+        "country": "country"
+    }
+} 

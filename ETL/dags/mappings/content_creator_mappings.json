@@ -1,0 +1,14 @@
+{
+  "source_table": "content_creators",
+  "source_type": "csv",
+  "destination_table": "mv_content_creators",
+  "column_mappings": {
+    "creator_id": "id",
+    "name": "name",
+    "country": "country",
+    "primary_game_id": "primary_game_id",
+    "content_type": "type_of_content",
+    "average_views": "average_views",
+    "revenue": "revenue"
+  }
+} 

@@ -1,0 +1,14 @@
+{
+    "source_table": "necessary_hardware",
+    "source_type": "csv",
+    "destination_table": "mv_hardware_req",
+    "column_mappings": {
+        "hardware_id": "hardware_id",
+        "operating_system": "operacional_system",
+        "memory": "memory",
+        "processor": "processor",
+        "graphics": "graphics",
+        "storage": "storage",
+        "game_id": "fk_game_id"
+    }
+} 
