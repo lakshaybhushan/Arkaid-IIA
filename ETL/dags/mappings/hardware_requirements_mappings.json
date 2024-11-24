@@ -1,6 +1,5 @@
 {
     "source_table": "necessary_hardware",
-    "source_type": "csv",
     "destination_table": "mv_hardware_req",
     "column_mappings": {
         "hardware_id": "hardware_id",

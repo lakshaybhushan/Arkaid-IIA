@@ -1,6 +1,5 @@
 {
     "source_table": "modders",
-    "source_type": "csv",
     "destination_table": "mv_modders",
     "column_mappings": {
         "modder_id": "id",

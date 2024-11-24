@@ -1,6 +1,5 @@
 {
     "source_table": "game_stats",
-    "source_type": "csv",
     "destination_table": "mv_game_stats",
     "column_mappings": {
         "game_id": "game_id",

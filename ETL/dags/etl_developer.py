@@ -74,7 +74,6 @@ def load_to_postgres():
                 str(row['Developer']),
                 int(row['Active']),
                 str(row['City']),
-                str(row['Autonomous area']),
                 str(row['Country']),
                 row['Est.'],
                 str(row['Notable games, series or franchises']),
@@ -95,7 +94,6 @@ def load_to_postgres():
                     developer,
                     active,
                     city,
-                    autonomous_area,
                     country,
                     established_date,
                     notable_games,
@@ -132,12 +130,11 @@ with DAG(
         task_id='create_postgres_table',
         postgres_conn_id=POSTGRES_CONN_ID,
         sql="""
-            DROP TABLE IF EXISTS developers;
+            DROP TABLE IF EXISTS developers CASCADE;
             CREATE TABLE developers (
                 developer TEXT,
                 active INTEGER,
                 city TEXT,
-                autonomous_area TEXT,
                 country TEXT,
                 established_date TIMESTAMP,
                 notable_games TEXT,

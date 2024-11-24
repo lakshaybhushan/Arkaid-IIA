@@ -39,7 +39,6 @@ def load_mapping():
             # Detailed logging of mapping configuration
             logger.info("=== Mapping Configuration Details ===")
             logger.info(f"Source Table: {mapping['source_table']}")
-            logger.info(f"Source Type: {mapping['source_type']}")
             logger.info(f"Destination Table: {mapping['destination_table']}")
             logger.info("\nColumn Mappings:")
             for dest_col, source_col in mapping['column_mappings'].items():

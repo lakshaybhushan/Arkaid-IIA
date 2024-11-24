@@ -1,6 +1,5 @@
 {
     "source_table": "developers",
-    "source_type": "csv",
     "destination_table": "mv_developers",
     "column_mappings": {
         "developer_id": "MD5(developer)",

@@ -1,5 +1,5 @@
 pandas
 apache-airflow-providers-postgres
 psycopg2-binary
-python-Levenshtein>=0.12.0
-fuzzywuzzy>=0.18.0
+fuzzywuzzy
+python-Levenshtein

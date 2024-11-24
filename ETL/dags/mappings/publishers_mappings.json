@@ -1,6 +1,5 @@
 {
     "source_table": "publishers",
-    "source_type": "csv",
     "destination_table": "mv_publishers",
     "column_mappings": {
         "publisher_id": "MD5(publisher)",

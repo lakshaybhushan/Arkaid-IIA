@@ -1,6 +1,5 @@
 {
     "source_table": "players",
-    "source_type": "postgres",
     "destination_table": "mv_players",
     "column_mappings": {
         "player_id": "id",

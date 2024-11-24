@@ -1,14 +1,17 @@
-from airflow import DAG
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.operators.python import PythonOperator
-from datetime import datetime, timedelta
+import csv
 import json
 import logging
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-import pandas as pd
-from typing import Dict
+import hashlib
 import tempfile
-import csv
+import pandas as pd
+from airflow import DAG
+from typing import Dict
+from datetime import datetime, timedelta
+from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 # Configure logging
 logging.basicConfig(
@@ -24,35 +27,59 @@ default_args = {
     'start_date': datetime(2024, 1, 1),
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 2,  # Increased retries for robustness
+    'retries': 2,
     'retry_delay': timedelta(minutes=5),
 }
 
 POSTGRES_CONN_ID = 'arkaid_aws_postgres'
-SIMILARITY_THRESHOLD = 0.9  # Jaccard similarity threshold
+SIMILARITY_THRESHOLD = 0.9
 
-def levenshtein_distance(s1: str, s2: str) -> int:
-    """Calculate the Levenshtein distance between two strings"""
-    if len(s1) < len(s2):
-        return levenshtein_distance(s2, s1)
+def load_mapping():
+    """Load the mapping configuration from JSON file"""
+    logger.info("Starting to load mapping configuration")
+    mapping_path = 'dags/mappings/games_mappings.json'
+    
+    try:
+        with open(mapping_path, 'r') as file:
+            mapping = json.load(file)
+            
+            logger.info("=== Mapping Configuration Details ===")
+            logger.info(f"Source Table: {mapping['source_table']}")
+            logger.info(f"Destination Table: {mapping['destination_table']}")
+            logger.info("\nColumn Mappings:")
+            for dest_col, source_col in mapping['column_mappings'].items():
+                logger.info(f"  {dest_col} -> {source_col}")
+            
+            return mapping
+    except Exception as e:
+        logger.error(f"Error loading mapping file: {str(e)}")
+        raise
 
-    if len(s2) == 0:
-        return len(s1)
+def get_current_view_definition(postgres_conn_id, view_name):
+    """Get the current view definition from the database"""
+    hook = PostgresHook(postgres_conn_id=postgres_conn_id)
+    
+    sql = """
+    SELECT pg_get_viewdef(%s, true) as view_def
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = %s
+    AND c.relkind = 'm';
+    """
+    
+    try:
+        result = hook.get_first(sql, parameters=[view_name, view_name])
+        return result[0] if result else None
+    except Exception as e:
+        logger.error(f"Error getting view definition: {str(e)}")
+        return None
 
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-
-    return previous_row[-1]
+def generate_view_hash(sql):
+    """Generate a hash of the view definition"""
+    return hashlib.md5(sql.encode()).hexdigest()
 
 def process_developer_matches(games_df: pd.DataFrame, developers_df: pd.DataFrame) -> Dict[str, str]:
-    """Process developer matches using Levenshtein distance"""
+    """Process developer matches using FuzzyWuzzy"""
     logger.info("Starting developer matching process")
     
     # Prepare data
@@ -87,19 +114,19 @@ def process_developer_matches(games_df: pd.DataFrame, developers_df: pd.DataFram
         for dev_name in game_devs:
             if dev_name in dev_dict:
                 dev_info = dev_dict[dev_name]
-                # Check game name similarity using Levenshtein distance
+                # Check game name similarity using FuzzyWuzzy
                 for notable_game in dev_info['notable_games']:
-                    distance = levenshtein_distance(game_name, notable_game)
-                    if distance <= 3:  # Maximum allowed distance
+                    ratio = fuzz.ratio(game_name, notable_game) / 100.0  # Convert to decimal
+                    if ratio >= SIMILARITY_THRESHOLD:
                         dev_mapping[game['id']] = dev_info['id']
-                        logger.debug(f"Matched game '{game_name}' with developer '{dev_name}' (distance: {distance})")
+                        logger.debug(f"Matched game '{game_name}' with developer '{dev_name}' (similarity: {ratio:.2f})")
                         break
     
     logger.info(f"Completed developer matching. Found {len(dev_mapping)} matches")
     return dev_mapping
 
 def process_publisher_matches(games_df: pd.DataFrame, publishers_df: pd.DataFrame) -> Dict[str, str]:
-    """Process publisher matches using Levenshtein distance"""
+    """Process publisher matches using FuzzyWuzzy"""
     logger.info("Starting publisher matching process")
     
     # Prepare data
@@ -134,16 +161,152 @@ def process_publisher_matches(games_df: pd.DataFrame, publishers_df: pd.DataFram
         for pub_name in game_pubs:
             if pub_name in pub_dict:
                 pub_info = pub_dict[pub_name]
-                # Check game name similarity using Levenshtein distance
+                # Check game name similarity using FuzzyWuzzy
                 for notable_game in pub_info['notable_games']:
-                    distance = levenshtein_distance(game_name, notable_game)
-                    if distance <= 3:  # Maximum allowed distance
+                    ratio = fuzz.ratio(game_name, notable_game) / 100.0  # Convert to decimal
+                    if ratio >= SIMILARITY_THRESHOLD:
                         pub_mapping[game['id']] = pub_info['id']
-                        logger.debug(f"Matched game '{game_name}' with publisher '{pub_name}' (distance: {distance})")
+                        logger.debug(f"Matched game '{game_name}' with publisher '{pub_name}' (similarity: {ratio:.2f})")
                         break
     
     logger.info(f"Completed publisher matching. Found {len(pub_mapping)} matches")
     return pub_mapping
+
+def generate_materialized_view_sql():
+    """Generate SQL for creating/replacing materialized view"""
+    logger.info("Starting to generate materialized view SQL")
+    
+    mapping = load_mapping()
+    source_table = mapping['source_table']
+    dest_table = mapping['destination_table']
+    column_mappings = mapping['column_mappings']
+    
+    # Create column mappings for SELECT statement
+    select_columns = []
+    for dest_col, source_col in column_mappings.items():
+        select_columns.append(f"{source_col} as {dest_col}")
+    
+    columns_sql = ",\n    ".join(select_columns)
+    
+    sql = f"""
+    CREATE MATERIALIZED VIEW IF NOT EXISTS {dest_table} AS
+    SELECT 
+    {columns_sql}
+    FROM {source_table};
+    
+    -- Create indexes on the materialized view
+    CREATE INDEX IF NOT EXISTS idx_mv_games_game_id ON {dest_table}(game_id);
+    CREATE INDEX IF NOT EXISTS idx_mv_games_game_name ON {dest_table}(game_name);
+    
+    -- Analyze the view for performance optimization
+    ANALYZE {dest_table};
+    """
+    
+    logger.info("Generated SQL for materialized view")
+    return sql
+
+def check_and_recreate_view():
+    """Check if view needs to be recreated and generate appropriate SQL"""
+    logger.info("Checking if view needs to be recreated")
+    
+    mapping = load_mapping()
+    dest_table = mapping['destination_table']
+    
+    # Generate new view SQL
+    new_view_sql = f"""
+        -- Enable pg_trgm extension if not exists
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        
+        {generate_materialized_view_sql()}
+    """
+    new_view_hash = generate_view_hash(new_view_sql)
+    
+    # Get current view definition
+    current_view_def = get_current_view_definition(POSTGRES_CONN_ID, dest_table)
+    
+    if current_view_def:
+        current_view_hash = generate_view_hash(current_view_def)
+        
+        if current_view_hash != new_view_hash:
+            logger.info("View definition has changed, recreating view")
+            return f"""
+                -- Enable pg_trgm extension if not exists
+                CREATE EXTENSION IF NOT EXISTS pg_trgm;
+                
+                DROP MATERIALIZED VIEW IF EXISTS {dest_table} CASCADE;
+                {new_view_sql}
+            """
+        else:
+            logger.info("View definition unchanged, skipping recreation")
+            return None
+    else:
+        logger.info("View does not exist, creating new view")
+        return f"""
+            -- Enable pg_trgm extension if not exists
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+            
+            {new_view_sql}
+        """
+
+def generate_refresh_sql():
+    """Generate SQL for refreshing the materialized view"""
+    mapping = load_mapping()
+    return f"REFRESH MATERIALIZED VIEW {mapping['destination_table']};"
+
+def match_developer_publisher():
+    """Main function to match developers and publishers"""
+    logger.info("Starting developer and publisher matching process")
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    
+    try:
+        # Load and process data as before
+        games_df = pd.read_sql("""
+            SELECT id, name, developers, publishers 
+            FROM (
+                SELECT id, name, developers, publishers 
+                FROM steam_games 
+                UNION ALL 
+                SELECT game_id as id, name, developer as developers, publisher as publishers 
+                FROM epic_games
+            ) combined_games
+        """, hook.get_conn())
+        logger.info(f"Loaded {len(games_df)} games records")
+        
+        developers_df = pd.read_sql("""
+            SELECT developer_id, developer_name, notable_games 
+            FROM mv_developers 
+            WHERE notable_games IS NOT NULL
+        """, hook.get_conn())
+        logger.info(f"Loaded {len(developers_df)} developers records")
+        
+        publishers_df = pd.read_sql("""
+            SELECT publisher_id, publisher_name, notable_games_published 
+            FROM mv_publishers 
+            WHERE notable_games_published IS NOT NULL
+        """, hook.get_conn())
+        logger.info(f"Loaded {len(publishers_df)} publishers records")
+        
+        # Process matches
+        dev_mapping = process_developer_matches(games_df, developers_df)
+        pub_mapping = process_publisher_matches(games_df, publishers_df)
+        
+        # Check if mappings have changed
+        if check_mappings_changed(hook, dev_mapping, pub_mapping):
+            logger.info("Creating new mapping tables")
+            # Drop materialized view first to remove dependencies
+            with hook.get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DROP MATERIALIZED VIEW IF EXISTS mv_games CASCADE;")
+            # Create new mapping tables
+            create_mapping_tables(hook, dev_mapping, pub_mapping)
+        else:
+            logger.info("Mappings unchanged, skipping recreation")
+        
+        logger.info("Successfully completed matching process")
+        
+    except Exception as e:
+        logger.error(f"Error in match_developer_publisher: {str(e)}")
+        raise
 
 def create_mapping_tables(hook, dev_mapping: Dict[str, str], pub_mapping: Dict[str, str], batch_size: int = 10000):
     """Create mapping tables and insert data in optimized batches"""
@@ -266,127 +429,36 @@ def check_mappings_changed(hook, dev_mapping: Dict[str, str], pub_mapping: Dict[
                 cur.execute("SELECT game_id, publisher_id FROM pub_mapping")
                 existing_pub_mappings = dict(cur.fetchall())
                 
+                # Compare structure of materialized view with expected structure
+                cur.execute("""
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'mv_games'
+                    ORDER BY ordinal_position;
+                """)
+                existing_columns = {col: dtype for col, dtype in cur.fetchall()}
+                
+                # Load current mapping configuration
+                mapping = load_mapping()
+                
                 dev_changed = existing_dev_mappings != dev_mapping
                 pub_changed = existing_pub_mappings != pub_mapping
                 
                 if dev_changed or pub_changed:
-                    logger.info("Mappings have changed, need to recreate tables")
+                    logger.info("Changes detected:")
+                    if dev_changed:
+                        logger.info("- Developer mappings changed")
+                    if pub_changed:
+                        logger.info("- Publisher mappings changed")
                     return True
                 
-                logger.info("Mappings haven't changed, no need to recreate tables")
+                logger.info("No changes detected in mappings")
                 return False
                 
     except Exception as e:
         logger.error(f"Error checking mappings: {str(e)}")
         # If there's an error checking, assume we need to recreate
         return True
-
-def match_developer_publisher():
-    """Main function to match developers and publishers"""
-    logger.info("Starting developer and publisher matching process")
-    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-    
-    try:
-        # Load and process data as before
-        games_df = pd.read_sql("""
-            SELECT id, name, developers, publishers 
-            FROM (
-                SELECT id, name, developers, publishers 
-                FROM steam_games 
-                UNION ALL 
-                SELECT game_id as id, name, developer as developers, publisher as publishers 
-                FROM epic_games
-            ) combined_games
-        """, hook.get_conn())
-        logger.info(f"Loaded {len(games_df)} games records")
-        
-        developers_df = pd.read_sql("""
-            SELECT developer_id, developer_name, notable_games 
-            FROM mv_developers 
-            WHERE notable_games IS NOT NULL
-        """, hook.get_conn())
-        logger.info(f"Loaded {len(developers_df)} developers records")
-        
-        publishers_df = pd.read_sql("""
-            SELECT publisher_id, publisher_name, notable_games_published 
-            FROM mv_publishers 
-            WHERE notable_games_published IS NOT NULL
-        """, hook.get_conn())
-        logger.info(f"Loaded {len(publishers_df)} publishers records")
-        
-        # Process matches
-        dev_mapping = process_developer_matches(games_df, developers_df)
-        pub_mapping = process_publisher_matches(games_df, publishers_df)
-        
-        # Check if mappings have changed
-        if check_mappings_changed(hook, dev_mapping, pub_mapping):
-            logger.info("Creating new mapping tables")
-            # Drop materialized view first to remove dependencies
-            with hook.get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DROP MATERIALIZED VIEW IF EXISTS mv_games CASCADE;")
-            # Create new mapping tables
-            create_mapping_tables(hook, dev_mapping, pub_mapping)
-        else:
-            logger.info("Mappings unchanged, skipping recreation")
-        
-        logger.info("Successfully completed matching process")
-        
-    except Exception as e:
-        logger.error(f"Error in match_developer_publisher: {str(e)}")
-        raise
-
-def generate_materialized_view_sql():
-    """Generate SQL for creating/replacing materialized view"""
-    logger.info("Generating materialized view SQL")
-    sql = """
-    -- Drop existing view if it exists
-    DROP MATERIALIZED VIEW IF EXISTS mv_games CASCADE;
-    
-    -- Create the new materialized view
-    CREATE MATERIALIZED VIEW mv_games AS
-    SELECT 
-        cg.id as game_id,
-        cg.name,
-        TO_CHAR(cg.release_date::date, 'YYYY-MM-DD') as release_date,
-        cg.description,
-        cg.price,
-        cg.genres,
-        dm.developer_id,
-        pm.publisher_id,
-        array_to_string(ARRAY[
-            CASE WHEN cg.windows = 1 THEN 'windows' END,
-            CASE WHEN cg.mac = 1 THEN 'mac' END,
-            CASE WHEN cg.linux = 1 THEN 'linux' END
-        ], ',') as platforms,
-        CASE 
-            WHEN cg.id IN (SELECT id FROM steam_games) THEN cg.metacritic_score
-            ELSE NULL
-        END as ratings
-    FROM (
-        SELECT id, name, release_date::date, about_game as description, price, genres, 
-               CAST(windows AS INTEGER) as windows, CAST(mac AS INTEGER) as mac, 
-               CAST(linux AS INTEGER) as linux, metacritic_score
-        FROM steam_games
-        UNION ALL
-        SELECT game_id as id, name, release_date::date, description, price, genres,
-               1 as windows, 0 as mac, 0 as linux, 
-               NULL as metacritic_score
-        FROM epic_games
-    ) cg
-    LEFT JOIN dev_mapping dm ON cg.id = dm.game_id
-    LEFT JOIN pub_mapping pm ON cg.id = pm.game_id
-    WITH DATA;
-    
-    -- Create indexes on the materialized view
-    CREATE INDEX idx_mv_games_game_id ON mv_games(game_id);
-    CREATE INDEX idx_mv_games_name ON mv_games(name);
-    
-    -- Analyze the view for performance optimization
-    ANALYZE mv_games;
-    """
-    logger.info("Generated materialized view SQL")
-    return sql
 
 # Create the DAG
 dag = DAG(
@@ -404,52 +476,23 @@ match_dev_pub = PythonOperator(
     dag=dag
 )
 
-# Task to create materialized view
-create_mv = PostgresOperator(
-    task_id='create_materialized_view',
+# Task to create/update materialized view
+create_or_update_mv = PostgresOperator(
+    task_id='create_or_update_materialized_view',
     postgres_conn_id=POSTGRES_CONN_ID,
-    sql=generate_materialized_view_sql(),
+    sql=check_and_recreate_view(),
     dag=dag
 )
 
-# Task to verify the existence of the materialized view
-verify_mv = PostgresOperator(
-    task_id='verify_materialized_view',
+# Task to refresh materialized view
+refresh_mv = PostgresOperator(
+    task_id='refresh_materialized_view',
     postgres_conn_id=POSTGRES_CONN_ID,
-    sql="""
-    DO $$
-    DECLARE
-        row_count INTEGER;
-        view_size TEXT;
-    BEGIN
-        IF EXISTS (
-            SELECT 1
-            FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE c.relname = 'mv_games'
-            AND c.relkind = 'm'
-        ) THEN
-            SELECT COUNT(*) INTO row_count FROM mv_games;
-            RAISE NOTICE 'Materialized view exists with % rows', row_count;
-            
-            -- Get view size and schema info
-            SELECT pg_size_pretty(pg_total_relation_size('mv_games')) INTO view_size;
-            RAISE NOTICE 'View size: %', view_size;
-            
-            -- Additional verification
-            SELECT COUNT(*) INTO row_count 
-            FROM mv_games 
-            WHERE game_id IS NOT NULL;
-            RAISE NOTICE 'Number of games with valid game_id: %', row_count;
-        ELSE
-            RAISE EXCEPTION 'Materialized view mv_games does not exist';
-        END IF;
-    END $$;
-    """,
+    sql=generate_refresh_sql(),
     dag=dag
 )
 
 # Set task dependencies
-match_dev_pub >> create_mv >> verify_mv
+match_dev_pub >> create_or_update_mv >> refresh_mv
 
 logger.info("DAG setup completed")
