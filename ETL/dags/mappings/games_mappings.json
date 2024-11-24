@@ -1,0 +1,17 @@
+{
+    "source_table": "(SELECT id, name, TO_CHAR(release_date::date, 'YYYY-MM-DD') as release_date, about_game as description, price, genres, developers, publishers, CAST(windows AS INTEGER) as windows, CAST(mac AS INTEGER) as mac, CAST(linux AS INTEGER) as linux, metacritic_score FROM steam_games UNION ALL SELECT game_id as id, name, TO_CHAR(release_date::date, 'YYYY-MM-DD') as release_date, description, price, genres, developer as developers, publisher as publishers, 1 as windows, 0 as mac, 0 as linux, NULL as metacritic_score FROM epic_games) AS combined_games",
+    "source_type": "csv",
+    "destination_table": "mv_games",
+    "column_mappings": {
+        "game_id": "id",
+        "name": "name",
+        "release_date": "release_date",
+        "description": "description",
+        "price": "price",
+        "genres": "genres",
+        "developer_id": "(SELECT d.developer_id FROM mv_developers d WHERE (SELECT MAX(levenshtein(game_name, name)) FROM unnest(string_to_array(d.notable_games, ',')) AS game_name) <= 3 AND (developers IS NOT NULL AND EXISTS (SELECT 1 FROM unnest(string_to_array(developers, ',')) AS dev_name WHERE levenshtein(dev_name, d.developer_name) <= 2)) LIMIT 1)",
+        "publisher_id": "(SELECT p.publisher_id FROM mv_publishers p WHERE (SELECT MAX(levenshtein(game_name, name)) FROM unnest(string_to_array(p.notable_games_published, ',')) AS game_name) <= 3 AND (publishers IS NOT NULL AND EXISTS (SELECT 1 FROM unnest(string_to_array(publishers, ',')) AS pub_name WHERE levenshtein(pub_name, p.publisher_name) <= 2)) LIMIT 1)",
+        "platforms": "array_to_string(ARRAY[CASE WHEN windows = 1 THEN 'windows' END, CASE WHEN mac = 1 THEN 'mac' END, CASE WHEN linux = 1 THEN 'linux' END], ',')",
+        "ratings": "CASE WHEN id IN (SELECT id FROM steam_games) THEN metacritic_score ELSE NULL END"
+    }
+} 

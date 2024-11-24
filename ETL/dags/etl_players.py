@@ -43,7 +43,7 @@ def process_csv():
     
     try:
         chunks = pd.read_csv(
-            'data_sources/players_main.csv',
+            'data_sources/players.csv',
             chunksize=chunk_size,
             na_values=['', 'null', 'NULL', '[]'],
             parse_dates=['DOB']
@@ -56,9 +56,9 @@ def process_csv():
             # Convert DOB to proper date format
             chunk['DOB'] = pd.to_datetime(chunk['DOB']).dt.strftime('%Y-%m-%d')
             
-            # Clean array fields
-            array_columns = ['Library_All', 'Library_Favorites', 'Library_Playing', 
-                           'Library_Title', 'Wishlist', 'PaymentMethod']
+            # Clean array fields (removed Library_Title and Library_Playing)
+            array_columns = ['Library_All', 'Library_Favorites', 
+                           'Wishlist', 'PaymentMethod']
             for col in array_columns:
                 chunk[col] = chunk[col].apply(clean_array_field)
             
@@ -87,9 +87,9 @@ def load_to_postgres():
     try:
         with conn.cursor() as cursor:
             logger.info("Truncating existing table")
-            cursor.execute("TRUNCATE TABLE players_main;")
+            cursor.execute("TRUNCATE TABLE players;")
             cursor.execute("""
-                SET work_mem = '256MB';           -- Increased for better performance
+                SET work_mem = '256MB';           
                 SET maintenance_work_mem = '512MB';
                 SET temp_buffers = '128MB';
             """)
@@ -120,13 +120,10 @@ def load_to_postgres():
                         str(row['Username']),
                         int(row['Age']),
                         row['DOB'],
-                        str(row['RecentlyPlayed']),
                         str(row['Email']),
                         str(row['Phone']),
                         str(row['Library_All']),
                         str(row['Library_Favorites']),
-                        str(row['Library_Playing']),
-                        str(row['Library_Title']),
                         str(row['Wishlist']),
                         str(row['PaymentMethod']),
                         str(row['Country'])
@@ -141,19 +138,16 @@ def load_to_postgres():
                     """)
                     cursor.copy_expert(
                         """
-                        COPY players_main (
+                        COPY players (
                             id,
                             name,
                             username,
                             age,
                             dob,
-                            recently_played,
                             email,
                             phone,
                             library_all,
                             library_favorites,
-                            library_playing,
-                            library_title,
                             wishlist,
                             payment_method,
                             country
@@ -188,9 +182,9 @@ def load_to_postgres():
         logger.info("Closed PostgreSQL connection")
 
 with DAG(
-    'etl_players_main_pipeline',
+    'etl_players_pipeline',
     default_args=default_args,
-    description='ETL pipeline for players main data',
+    description='ETL pipeline for players data',
     schedule_interval=timedelta(days=1),
     start_date=datetime(2024, 1, 1),
     catchup=False
@@ -200,31 +194,28 @@ with DAG(
         task_id='create_postgres_table',
         postgres_conn_id=POSTGRES_CONN_ID,
         sql="""
-            DROP TABLE IF EXISTS players_main;
-            CREATE TABLE players_main (
+            DROP TABLE IF EXISTS players;
+            CREATE TABLE players (
                 id TEXT,
                 name TEXT,
                 username TEXT,
                 age INTEGER,
                 dob DATE,
-                recently_played TEXT,
                 email TEXT,
                 phone TEXT,
                 library_all TEXT,
                 library_favorites TEXT,
-                library_playing TEXT,
-                library_title TEXT,
                 wishlist TEXT,
                 payment_method TEXT,
                 country TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) WITH (autovacuum_enabled = true);
             
-            CREATE INDEX idx_players_id ON players_main(id);
-            CREATE INDEX idx_players_username ON players_main(username);
-            CREATE INDEX idx_players_email ON players_main(email);
-            CREATE INDEX idx_players_dob ON players_main(dob);
-            CREATE INDEX idx_players_country ON players_main(country);
+            CREATE INDEX idx_players_id ON players(id);
+            CREATE INDEX idx_players_username ON players(username);
+            CREATE INDEX idx_players_email ON players(email);
+            CREATE INDEX idx_players_dob ON players(dob);
+            CREATE INDEX idx_players_country ON players(country);
         """
     )
 

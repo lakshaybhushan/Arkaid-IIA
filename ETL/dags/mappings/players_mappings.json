@@ -1,0 +1,19 @@
+{
+    "source_table": "players",
+    "source_type": "postgres",
+    "destination_table": "mv_players",
+    "column_mappings": {
+        "player_id": "id",
+        "player_name": "name",
+        "player_username": "username",
+        "player_age": "age",
+        "player_dob": "dob",
+        "player_email": "email",
+        "player_phone": "phone",
+        "player_library": "library_all",
+        "player_favorite_games": "library_favorites",
+        "player_wishlist": "wishlist",
+        "player_payment_method": "payment_method",
+        "player_country": "country" 
+    }
+} 
