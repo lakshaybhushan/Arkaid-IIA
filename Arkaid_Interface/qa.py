@@ -2,9 +2,21 @@ from sqlanalyzer import query_analyzer
 import re
 
 class QueryInsights:
-    def __init__(self, query):
+    def __init__(self, query, db_config):
         self.query = query.strip()
         self.analyzer = query_analyzer.Analyzer(query)
+        self.db_config = db_config
+        
+    def _get_table_columns(self, table_name):
+        """Get columns for a specific table from config."""
+        if not self.db_config:
+            return []
+            
+        for db in self.db_config.get('databases', []):
+            for table in db.get('tables', []):
+                if table['name'] == table_name:
+                    return list(table['columns'].keys())
+        return []
     
     def get_detailed_analysis(self):
         try:
@@ -73,7 +85,7 @@ class QueryInsights:
             select_part = match.group(1)
             columns = []
             
-            # Handle nested parentheses and commas within functions
+            # Split by comma but respect parentheses
             current_column = ''
             paren_count = 0
             
@@ -83,12 +95,13 @@ class QueryInsights:
                 elif char == ')':
                     paren_count -= 1
                 elif char == ',' and paren_count == 0:
-                    columns.append(current_column.strip())
+                    if current_column.strip():
+                        columns.append(current_column.strip())
                     current_column = ''
                     continue
                 current_column += char
             
-            if current_column:
+            if current_column.strip():
                 columns.append(current_column.strip())
                 
             return columns
