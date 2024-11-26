@@ -6,3 +6,5 @@
 /matchmatix
 ETL/data_sources
 arkaid_api/
+.venv
+__pycache__

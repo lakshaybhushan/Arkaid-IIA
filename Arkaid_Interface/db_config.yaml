@@ -1,0 +1,37 @@
+databases:
+  - name: DB1
+    host: "localhost"
+    port: "5432"
+    dbname: "arkaidDB"
+    username: "arkaid"
+    password: "arkaid"
+    tables:
+      - name: player_stats
+        columns:
+          playerId: text
+          fk_gameid: text
+          hrs_played: double precision
+          achievements_completed: bigint
+          rating: bigint
+          favorites: bigint
+  - name: DB2
+    host: "arkaid-postgres.crcw0q6uux8e.ap-south-1.rds.amazonaws.com"
+    port: "5432"
+    dbname: "postgres"
+    username: "postgres"
+    password: "postgres"
+    tables:
+      - name: players
+        columns:
+          id: text
+          name: text
+          username: text
+          age: integer
+          dob: date
+          email: text
+          phone: text
+          library_all: text
+          library_favorites: text
+          wishlist: text
+          payment_method: text
+          country: text

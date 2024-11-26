@@ -1,0 +1,226 @@
+databases:
+  - name: DB1
+    host: localhost
+    port: "5432"
+    dbname: arkaidDB
+    username: arkaid
+    password: arkaid
+    tables:
+      - name: open_critic
+        columns:
+          top_critic: boolean
+          rating: double precision
+          author: text
+          comment: text
+          date: text
+          id: text
+          game_id: text
+          company: text
+      - name: player_sales
+        columns:
+          Price: double precision
+          SaleID: text
+          GameID: text
+          PlayerID: text
+          CountrySold: text
+          LocationSold: text
+      - name: player_stats
+        columns:
+          hrs_played: double precision
+          achievements_completed: bigint
+          rating: bigint
+          favorites: bigint
+          playerId: text
+          fk_gameid: text
+      - name: players_virtual
+        columns:
+          Total_Hours_Played: double precision
+          Wallet: double precision
+          ID: text
+          List_of_SaleIDs: text
+          Cart: text
+          RecentlyPlayed: text
+      - name: players_virtual_view
+        columns:
+          Total_Hours_Played: double precision
+          Wallet: double precision
+          ID: text
+          List_of_SaleIDs: text
+          Cart: text
+          RecentlyPlayed: text
+      - name: comments_rating_view
+        columns:
+          top_critic: boolean
+          rating: double precision
+          author: text
+          comment: text
+          date: text
+          id: text
+          game_id: text
+          company: text
+      - name: realtime_sales_view
+        columns:
+          Price: double precision
+          SaleID: text
+          GameID: text
+          PlayerID: text
+          CountrySold: text
+          LocationSold: text
+      - name: player_stats_view
+        columns:
+          hrs_played: double precision
+          achievements_completed: bigint
+          rating: bigint
+          favorites: bigint
+          playerId: text
+          fk_gameid: text
+  - name: DB2
+    host: arkaid-postgres.crcw0q6uux8e.ap-south-1.rds.amazonaws.com
+    port: "5432"
+    dbname: postgres
+    username: postgres
+    password: postgres
+    tables:
+      - name: epic_games
+        columns:
+          release_date: timestamp without time zone
+          price: numeric
+          created_at: timestamp without time zone
+          game_id: text
+          description: text
+          developer: text
+          publisher: text
+          genres: text
+          platform: text
+          name: text
+          game_slug: text
+      - name: developers
+        columns:
+          created_at: timestamp without time zone
+          active: integer
+          established_date: timestamp without time zone
+          country: text
+          developer: text
+          notable_games: text
+          notes: text
+          city: text
+      - name: content_creators
+        columns:
+          average_views: numeric
+          revenue: numeric
+          created_at: timestamp without time zone
+          primary_game_id: text
+          id: text
+          type_of_content: text
+          name: text
+          country: text
+      - name: dev_mapping
+        columns:
+          game_id: text
+          developer_id: text
+      - name: necessary_hardware
+        columns:
+          created_at: timestamp without time zone
+          operacional_system: text
+          processor: text
+          memory: text
+          hardware_id: text
+          storage: text
+          fk_game_id: text
+          graphics: text
+      - name: game_stats
+        columns:
+          created_at: timestamp without time zone
+          total_critics: integer
+          completion_rate: numeric
+          daily_active_users: integer
+          monthly_active_users: integer
+          favorites: integer
+          achievements: integer
+          hrs_played: numeric
+          avg_critic_rating: numeric
+          avg_user_rating: numeric
+          total_users: integer
+          name: text
+          genres: text
+          age_rating: text
+          difficulty_level: text
+          game_id: text
+      - name: pub_mapping
+        columns:
+          game_id: text
+          publisher_id: text
+      - name: publishers
+        columns:
+          established_date: timestamp without time zone
+          active: integer
+          created_at: timestamp without time zone
+          notes: text
+          notable_games: text
+          headquarters: text
+          publisher: text
+      - name: players
+        columns:
+          dob: date
+          age: integer
+          created_at: timestamp without time zone
+          email: text
+          id: text
+          library_all: text
+          library_favorites: text
+          wishlist: text
+          payment_method: text
+          country: text
+          phone: text
+          name: text
+          username: text
+      - name: steam_games
+        columns:
+          user_score: numeric
+          positive: integer
+          negative: integer
+          dlc_count: integer
+          achievements: integer
+          recommendations: integer
+          release_date: date
+          avg_playtime_forever: numeric
+          avg_playtime_two_weeks: numeric
+          median_playtime_forever: numeric
+          median_playtime_two_weeks: numeric
+          peak_ccu: numeric
+          required_age: integer
+          windows: integer
+          mac: integer
+          linux: integer
+          metacritic_score: numeric
+          price: numeric
+          created_at: timestamp without time zone
+          screenshots: text
+          movies: text
+          metacritic_url: text
+          name: text
+          estimated_owners: text
+          about_game: text
+          supported_languages: text
+          full_audio_languages: text
+          reviews: text
+          header_image: text
+          website: text
+          support_url: text
+          support_email: text
+          id: text
+          score_rank: text
+          notes: text
+          developers: text
+          publishers: text
+          categories: text
+          genres: text
+          tags: text
+      - name: modders
+        columns:
+          created_at: timestamp without time zone
+          id: text
+          name: text
+          primary_game_id: text
+          type_of_mod: text
+          country: text
