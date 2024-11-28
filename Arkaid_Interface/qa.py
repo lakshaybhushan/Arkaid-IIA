@@ -12,7 +12,14 @@ class QueryInsights:
         if not self.db_config:
             return []
             
+        # Check if it's a materialized view
+        is_mv = table_name.lower().startswith(('mv_', 'mv'))
+        
         for db in self.db_config.get('databases', []):
+            # For materialized views, only look in DB3
+            if is_mv and db['name'] != 'DB3':
+                continue
+            
             for table in db.get('tables', []):
                 if table['name'] == table_name:
                     return list(table['columns'].keys())
@@ -82,10 +89,18 @@ class QueryInsights:
             if not match:
                 return []
             
-            select_part = match.group(1)
-            columns = []
+            select_part = match.group(1).strip()
             
-            # Split by comma but respect parentheses
+            # Handle SELECT *
+            if select_part == '*':
+                # Get all columns from the first table
+                if self.analysis['tables_involved']:
+                    first_table = self.analysis['tables_involved'][0]['name']
+                    return self._get_table_columns(first_table)
+                return ['*']
+            
+            columns = []
+            # Rest of the existing column parsing logic...
             current_column = ''
             paren_count = 0
             
@@ -125,7 +140,12 @@ class QueryInsights:
             return []
     
     def _analyze_joins(self):
+        """Analyze JOIN conditions in the query."""
         try:
+            # First check if JOIN keyword exists
+            if 'JOIN' not in self.query.upper():
+                return None
+            
             join_types = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL JOIN', 'CROSS JOIN', 'JOIN']
             joins = []
             

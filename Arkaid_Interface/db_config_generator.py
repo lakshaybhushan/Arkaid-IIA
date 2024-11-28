@@ -39,6 +39,14 @@ def generate_db_config() -> Dict:
             "dbname": "postgres",
             "username": "postgres",
             "password": "postgres"
+        },
+        {
+            "name": "DB3",
+            "host": "centeralized-db.crcw0q6uux8e.ap-south-1.rds.amazonaws.com",
+            "port": "5432",
+            "dbname": "postgres",
+            "username": "sameer123",
+            "password": "?k$+M40waa1mWrs%BYtw3aorf#l3"
         }
     ]
     

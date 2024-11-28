@@ -2,6 +2,7 @@ from qa import QueryInsights
 import sqlparse
 from sqlparse.sql import IdentifierList, Identifier, Token
 from sqlparse.tokens import Keyword, DML
+import re
 
 class QueryDecomposer:
     def __init__(self, query, db_config):
@@ -57,6 +58,10 @@ class QueryDecomposer:
         if not tables:
             return {'error': 'No tables found in query'}
         
+        # If no JOINs, return the original query for the single table
+        if not self.analysis['joins']:
+            return {tables[0]['name']: self.query}
+        
         subqueries = {}
         selected_columns = self._parse_selected_columns()
         
@@ -99,36 +104,55 @@ class QueryDecomposer:
     def _parse_column_identifier(self, identifier):
         """Parse a column identifier into its components."""
         if not identifier:
-            return None
+            return {
+                'table_alias': '',
+                'column': '*',
+                'alias': None,
+                'full_reference': '*'
+            }
         
         full_name = identifier.value.strip()
         alias = None
         table_alias = None
         column_name = full_name
         
+        # Handle COUNT(*) and other aggregates with *
+        agg_funcs = ['COUNT', 'SUM', 'AVG', 'MAX', 'MIN']
+        for func in agg_funcs:
+            if f'{func}(*' in full_name.upper():
+                # Check if there's an alias
+                parts = full_name.split(' AS ' if ' AS ' in full_name else ' as ')
+                if len(parts) > 1:
+                    alias = parts[1].strip()
+                return {
+                    'table_alias': '',
+                    'column': parts[0].strip(),
+                    'alias': alias,
+                    'full_reference': full_name
+                }
+        
         # Handle AS alias
         if ' AS ' in full_name.upper():
-            parts = full_name.split(' AS ')
+            parts = full_name.split(' AS ' if ' AS ' in full_name else ' as ')
             column_name = parts[0].strip()
-            alias = parts[1].strip()
+            alias = parts[1].strip() if len(parts) > 1 else None
         
-        # Handle table qualification for non-aggregate functions
-        if not any(agg in column_name.upper() for agg in ('SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(')):
-            if '.' in column_name:
-                parts = column_name.split('.')
-                table_alias = parts[0].strip()
-                column_name = parts[1].strip()
-        else:
-            # For aggregate functions, extract table alias if present
-            if '.' in column_name:
-                # Extract table alias from within the function
-                # e.g., SUM(ps.price) -> table_alias = ps
-                match = column_name.split('(')[1].split('.')[0].strip()
-                if match:
-                    table_alias = match
+        # Handle table qualification
+        if '.' in column_name:
+            parts = column_name.split('.')
+            table_alias = parts[0].strip()
+            column_name = parts[1].strip()
+        
+        # Handle aggregate functions
+        for func in agg_funcs:
+            if f'{func}(' in column_name.upper():
+                # Extract table alias if present in the function argument
+                func_args = column_name[column_name.find('(')+1:column_name.rfind(')')]
+                if '.' in func_args:
+                    table_alias = func_args.split('.')[0].strip()
         
         return {
-            'table_alias': table_alias,
+            'table_alias': table_alias or '',
             'column': column_name,
             'alias': alias,
             'full_reference': full_name
@@ -147,42 +171,20 @@ class QueryDecomposer:
     def _get_table_specific_columns(self, table_alias, columns):
         """Get columns specific to a given table alias."""
         table_columns = set()
+        base_columns = set()
+        
+        # Handle SELECT *
+        if len(columns) == 1 and columns[0]['column'] == '*':
+            # Get all columns from table schema
+            table_schema = self._get_table_schema(table_alias)
+            if table_schema:
+                return list(table_schema)
+            return ['*']  # Fallback if schema not available
         
         # Get the actual column names from config for case sensitivity
         table_schema = self._get_table_schema(table_alias)
         
-        # Handle both regular and aggregate columns from SELECT
-        for col in columns:
-            if not col['table_alias'] or col['table_alias'] == table_alias:
-                # Handle aggregate functions (SUM, COUNT, AVG, etc.)
-                if any(agg in col['full_reference'].upper() for agg in ('SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(')):
-                    modified_reference = col['full_reference']
-                    if '.' in modified_reference:
-                        agg_start = modified_reference.find('(')
-                        agg_end = modified_reference.find(')')
-                        if agg_start != -1 and agg_end != -1:
-                            inner_content = modified_reference[agg_start+1:agg_end]
-                            if '.' in inner_content:
-                                _, column_part = inner_content.split('.')
-                                # Get correct case from schema
-                                if table_schema:
-                                    column_part = self._get_correct_case(column_part.strip(), table_schema)
-                                modified_reference = (
-                                    modified_reference[:agg_start+1] + 
-                                    column_part + 
-                                    modified_reference[agg_end:]
-                                )
-                    table_columns.add(modified_reference)
-                elif col['table_alias'] == table_alias:
-                    # For regular columns, preserve case from schema
-                    column = col['column']
-                    if table_schema:
-                        column = self._get_correct_case(column, table_schema)
-                    if col['alias']:
-                        column = f"{column} AS {col['alias']}"
-                    table_columns.add(column)
-        
-        # Add join columns with correct case
+        # First, add join columns to ensure they're included without aliases
         joins = self.analysis['joins']
         if joins:
             for join in joins:
@@ -194,10 +196,40 @@ class QueryDecomposer:
                         join_table_alias, join_column = part.split('.')
                         join_table_alias = join_table_alias.strip()
                         if join_table_alias.upper() == table_alias.upper():
-                            join_column = join_column.strip('"')
+                            join_column = join_column.strip('"').lower()
                             if table_schema:
                                 join_column = self._get_correct_case(join_column, table_schema)
-                            table_columns.add(join_column)
+                            if join_column.lower() not in base_columns:
+                                table_columns.add(join_column)
+                                base_columns.add(join_column.lower())
+        
+        # Then handle selected columns
+        for col in columns:
+            col_table_alias = col.get('table_alias', '').upper()
+            if not col_table_alias or col_table_alias == table_alias.upper():
+                column = col['column']
+                
+                # Handle aggregate functions
+                if any(agg in column.upper() for agg in ('SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(')):
+                    table_columns.add(column)
+                else:
+                    # For regular columns
+                    if '.' in column:
+                        _, column = column.split('.')
+                    column = column.lower()
+                    if table_schema:
+                        column = self._get_correct_case(column, table_schema)
+                    
+                    # If this column is used in a join, don't alias it
+                    if column.lower() in base_columns:
+                        table_columns.add(column)
+                    else:
+                        # Add alias if present
+                        alias = col.get('alias')
+                        if alias:
+                            column = f"{column} AS {alias}"
+                        table_columns.add(column)
+                        base_columns.add(column.lower())
         
         return list(table_columns)
     
@@ -209,7 +241,14 @@ class QueryDecomposer:
         for table in self.analysis['tables_involved']:
             if table['alias'] == table_alias or table['name'] == table_alias:
                 table_name = table['name']
+                # Check if it's a materialized view (starts with mv_ or mv)
+                is_mv = table_name.lower().startswith(('mv_', 'mv'))
+                
                 for db in self.db_config.get('databases', []):
+                    # For materialized views, only look in DB3
+                    if is_mv and db['name'] != 'DB3':
+                        continue
+                    
                     for table_config in db.get('tables', []):
                         if table_config['name'] == table_name:
                             return table_config['columns']
@@ -284,3 +323,28 @@ class QueryDecomposer:
                 tables.add(table)
                 
         return list(tables)
+    
+    def convert_sql_where_to_pandas(self, where_clause):
+        """Convert SQL WHERE clause to pandas query syntax."""
+        # Remove table aliases from the where clause
+        for table in self.analysis['tables_involved']:
+            alias = table['alias'] or table['name']
+            where_clause = where_clause.replace(f"{alias}.", "")
+        
+        # Convert column names to lowercase to match DataFrame columns
+        where_clause = where_clause.lower()
+        
+        # Handle NULL conditions
+        where_clause = where_clause.replace(' is null', '.isnull()')
+        where_clause = where_clause.replace(' is not null', '.notnull()')
+        
+        # Basic conversions
+        where_clause = where_clause.replace(' and ', ' & ')
+        where_clause = where_clause.replace(' or ', ' | ')
+        where_clause = where_clause.replace('=', '==')
+        where_clause = where_clause.replace('<>', '!=')
+        
+        # Handle string literals
+        where_clause = re.sub(r"'([^']*)'", r'"\1"', where_clause)
+        
+        return where_clause

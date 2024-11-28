@@ -19,6 +19,7 @@ databases:
           name: text
           game_slug: text
           publisher: text
+        type: table
       - name: epic_players
         columns:
           age: integer
@@ -34,6 +35,7 @@ databases:
           name: text
           username: text
           email: text
+        type: table
       - name: developers
         columns:
           est: date
@@ -44,6 +46,7 @@ databases:
           notes: text
           developer: text
           city: text
+        type: table
       - name: publishers
         columns:
           est: date
@@ -53,6 +56,7 @@ databases:
           notable_games_published: text
           publisher: text
           headquarters: text
+        type: table
   - name: DB2
     host: arkaid-postgres.crcw0q6uux8e.ap-south-1.rds.amazonaws.com
     port: "5432"
@@ -60,15 +64,6 @@ databases:
     username: postgres
     password: postgres
     tables:
-      - name: content_creators
-        columns:
-          revenue: double precision
-          average_views: integer
-          country: text
-          id: text
-          primary_game: text
-          type_of_content: text
-          name: text
       - name: steam_games
         columns:
           price: double precision
@@ -99,6 +94,17 @@ databases:
           estimated_owners: text
           peak_ccu: text
           age_rating: text
+        type: table
+      - name: content_creators
+        columns:
+          revenue: double precision
+          average_views: integer
+          country: text
+          id: text
+          primary_game: text
+          type_of_content: text
+          name: text
+        type: table
       - name: steam_players
         columns:
           age: integer
@@ -114,6 +120,7 @@ databases:
           name: text
           username: text
           email: text
+        type: table
       - name: modders
         columns:
           id: text
@@ -121,3 +128,50 @@ databases:
           type_of_mod: text
           country: text
           primary_game: text
+        type: table
+  - name: DB3
+    host: centeralized-db.crcw0q6uux8e.ap-south-1.rds.amazonaws.com
+    port: "5432"
+    dbname: postgres
+    username: sameer123
+    password: ?k$+M40waa1mWrs%BYtw3aorf#l3
+    tables:
+      - name: mv_players
+        columns:
+          player_id: uuid
+          player_name: text
+          player_username: text
+          player_email: text
+          player_age: integer
+          player_dob: date
+          player_phone: text
+          player_total_hrs_played: numeric(10,2)
+          player_library_count: integer
+          player_avg_rating_given: numeric(10,2)
+          player_country: text
+          player_platform: text
+        type: materialized_view
+      - name: mv_games
+        columns:
+          game_id: uuid
+          game_name: text
+          game_release_date: date
+          game_price: numeric(10,2)
+          game_developers: text
+          game_publishers: text
+          game_genres: text
+          game_platform: text
+        type: materialized_view
+      - name: mv_cc_games
+        columns:
+          creator_id: text
+          creator_name: text
+          content_type: text
+          creator_country: text
+          total_revenue_generated: double precision
+          average_views: integer
+          primary_game_id: uuid
+          primary_game_name: text
+          developer: text
+          publisher: text
+        type: materialized_view
