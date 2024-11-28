@@ -199,6 +199,10 @@ class WarehouseManager:
                     target_type = self._get_postgres_type(self.mapping_config["target_schema"][target_col])
                     select_columns.append(f"NULL::{target_type} as {target_col}")
             
+            # Add hardcoded game_platform column based on source
+            platform_name = 'Steam' if source["name"] == 'steam_games' else 'Epic'
+            select_columns.append(f"'{platform_name}'::TEXT as game_platform")
+            
             # Use schema-qualified foreign table reference
             query = f"""
                 SELECT 

@@ -1,21 +1,23 @@
 {
-    "materialized_view": "mv_games",
+    "materialized_view": "mv_players",
     "target_schema": {
-      "game_id": "AUTO_INCREMENT PRIMARY KEY",
-      "game_name": "Text",
-      "game_release_date": "Date",
-      "game_price": "Float",
-      "game_developers": "Text",
-      "game_publishers": "Text",
-      "game_genres": "Text"
+      "player_id": "AUTO_INCREMENT PRIMARY KEY",
+      "player_name": "Text",
+      "player_email": "Text",
+      "player_age": "Integer",
+      "player_dob": "Date",
+      "total_hrs_played": "Float",
+      "player_library_count": "Integer",
+      "player_average_rating": "Float",
+      "player_country": "Text"
     },
     "sources": [
       {
-        "name": "steam_games",
+        "name": "steam_players",
         "database": "DB1"
       },
       {
-        "name": "epic_games",
+        "name": "epic_players",
         "database": "DB2"
       }
     ]
