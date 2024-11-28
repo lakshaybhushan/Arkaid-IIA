@@ -1,0 +1,23 @@
+{
+    "materialized_view": "mv_games",
+    "target_schema": {
+      "game_id": "AUTO_INCREMENT PRIMARY KEY",
+      "game_name": "Text",
+      "game_release_date": "Date",
+      "game_price": "Float",
+      "game_developers": "Text",
+      "game_publishers": "Text",
+      "game_genres": "Text"
+    },
+    "sources": [
+      {
+        "name": "steam_games",
+        "database": "DB1"
+      },
+      {
+        "name": "epic_games",
+        "database": "DB2"
+      }
+    ]
+  }
+  
