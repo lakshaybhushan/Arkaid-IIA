@@ -3,12 +3,14 @@
     "target_schema": {
       "player_id": "AUTO_INCREMENT PRIMARY KEY",
       "player_name": "Text",
+      "player_username": "Text",
       "player_email": "Text",
       "player_age": "Integer",
       "player_dob": "Date",
-      "total_hrs_played": "Float",
+      "player_phone": "Text",
+      "player_total_hrs_played": "Float",
       "player_library_count": "Integer",
-      "player_average_rating": "Float",
+      "player_avg_rating_given": "Float",
       "player_country": "Text"
     },
     "sources": [

@@ -1,0 +1,28 @@
+{
+  "steam_players": {
+    "age": "player_age",
+    "dob": "player_dob",
+    "total_hrs_played": "player_total_hrs_played",
+    "avg_rating_given": "player_avg_rating_given",
+    "id": "player_id",
+    "library": "player_library_count",
+    "country": "player_country",
+    "phone": "player_phone",
+    "name": "player_name",
+    "username": "player_username",
+    "email": "player_email"
+  },
+  "epic_players": {
+    "age": "player_age",
+    "dob": "player_dob",
+    "total_hrs_played": "player_total_hrs_played",
+    "avg_rating_given": "player_avg_rating_given",
+    "id": "player_id",
+    "library": "player_library_count",
+    "country": "player_country",
+    "phone": "player_phone",
+    "name": "player_name",
+    "username": "player_username",
+    "email": "player_email"
+  }
+}

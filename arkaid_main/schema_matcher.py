@@ -20,7 +20,9 @@ class SchemaMapper:
             'game', 'games', 'gaming',
             'steam', 'epic',
             'app', 'application',
-            'product'
+            'product',
+            'player', 'players',
+            'user', 'users'
         ]
         
     def _load_yaml(self, path: str) -> dict:
@@ -177,7 +179,7 @@ class SchemaMapper:
 if __name__ == "__main__":
     mapper = SchemaMapper(
         db_config_path='db_config.yaml',
-        mapping_file_path='mappings/mv_games.json'
+        mapping_file_path='mappings/mv_players.json'
     )
     
     # Generate and print mappings
