@@ -1,0 +1,17 @@
+{
+  "mv_games": {
+    "game_id": "game_id",
+    "game_name": "game_name",
+    "developer": "developer",
+    "publisher": "publisher"
+  },
+  "content_creators": {
+    "id": "creator_id",
+    "name": "creator_name",
+    "type_of_content": "content_type",
+    "country": "country",
+    "average_views": "average_views",
+    "revenue": "total_revenue_generated",
+    "primary_game": "game_name"
+  }
+}

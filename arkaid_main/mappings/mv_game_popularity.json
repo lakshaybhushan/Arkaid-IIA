@@ -1,0 +1,20 @@
+{
+    "materialized_view": "mv_game_popularity",
+    "target_schema": {
+      "game_name": "Text",
+      "platform": "Date",
+      "total_platime": "Float",
+      "total_players": "Text"
+    },
+    "sources": [
+      {
+        "name": "steam_games",
+        "database": "DB1"
+      },
+      {
+        "name": "epic_games",
+        "database": "DB2"
+      }
+    ]
+  }
+  

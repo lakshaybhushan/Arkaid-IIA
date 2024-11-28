@@ -1,0 +1,25 @@
+{
+  "materialized_view": "mv_cc_games",
+  "target_schema": {
+    "creator_id": "Text",
+    "creator_name": "Text",
+    "content_type": "Text",
+    "creator_country": "Text",
+    "game_id": "Text",
+    "game_name": "Text",
+    "total_revenue_generated": "Float",
+    "average_views": "Float",
+    "developer": "Text",
+    "publisher": "Text"
+  },
+  "sources": [
+    {
+      "name": "mv_games",
+      "database": "DB3"
+    },
+    {
+      "name": "content_creators",
+      "database": "DB1"
+    }
+  ]
+}
