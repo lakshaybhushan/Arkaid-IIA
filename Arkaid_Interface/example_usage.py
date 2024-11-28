@@ -305,13 +305,24 @@ if __name__ == "__main__":
     # Initialize analyzer with config path
     analyzer = QueryAnalyzer('config.yaml')
     
-    # Example query using tables from config
     query = """
-    SELECT sg.Name, eg.platform, SUM(ps.price) AS Total_Revenue
-    FROM steam_games sg
-    JOIN player_sales ps ON sg.id = ps.gameid
-    JOIN epic_games eg ON sg.id = eg.game_id
-    GROUP BY sg.Name, eg.platform;
+SELECT 
+    steam.name AS steam_game_name,
+    steam.price AS steam_price,
+    epic.name AS epic_game_name,
+    epic.price AS epic_price,
+    epic.platform
+FROM 
+    steam_games steam
+JOIN 
+    epic_games epic
+ON 
+    steam.id = epic.game_id
+WHERE 
+    steam.price IS NOT NULL AND epic.price IS NOT NULL
+ORDER BY 
+    GREATEST(steam.price, epic.price) DESC
+LIMIT 5;
     """
 
     analyzer.analyze_and_decompose_query(query)

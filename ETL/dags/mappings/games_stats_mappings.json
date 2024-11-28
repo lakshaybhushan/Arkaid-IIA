@@ -1,21 +1,21 @@
 {
-    "source_table": "game_stats",
-    "destination_table": "mv_game_stats",
-    "column_mappings": {
-        "game_id": "game_id",
-        "source": "CASE WHEN EXISTS (SELECT 1 FROM steam_games WHERE steam_games.id = game_stats.game_id) THEN 'steam' WHEN EXISTS (SELECT 1 FROM epic_games WHERE epic_games.game_id = game_stats.game_id) THEN 'epic' ELSE NULL END",
-        "genres": "genres",
-        "achievements": "achievements",
-        "difficulty_level": "difficulty_level",
-        "hours_played": "hrs_played",
-        "avg_critic_rating": "avg_critic_rating",
-        "avg_user_rating": "avg_user_rating",
-        "total_users": "total_users",
-        "total_critics": "total_critics",
-        "age_rating": "age_rating",
-        "completion_rate": "completion_rate",
-        "daily_active_users": "daily_active_users",
-        "monthly_active_users": "monthly_active_users",
-        "favorites": "favorites"
-    }
-} 
+  "source_table": "game_stats",
+  "destination_table": "mv_game_stats",
+  "column_mappings": {
+    "game_id": "game_id",
+    "source": "CASE WHEN EXISTS (SELECT 1 FROM steam_games WHERE steam_games.id = game_stats.game_id) THEN 'steam' WHEN EXISTS (SELECT 1 FROM epic_games WHERE epic_games.game_id = game_stats.game_id) THEN 'epic' ELSE NULL END",
+    "genres": "genres",
+    "achievements": "achievements",
+    "difficulty_level": "difficulty_level",
+    "hours_played": "hrs_played",
+    "avg_critic_rating": "avg_critic_rating",
+    "avg_user_rating": "avg_user_rating",
+    "total_users": "total_users",
+    "total_critics": "total_critics",
+    "age_rating": "age_rating",
+    "completion_rate": "completion_rate",
+    "daily_active_users": "daily_active_users",
+    "monthly_active_users": "monthly_active_users",
+    "favorites": "favorites"
+  }
+}

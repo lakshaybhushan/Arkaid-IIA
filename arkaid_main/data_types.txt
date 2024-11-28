@@ -1,0 +1,114 @@
+
+epic_players.csv datatypes:
+--------------------------------------------------
+id               : string
+name             : string
+username         : string
+age              : integer
+dob              : date
+email            : string
+phone            : string
+library          : list
+favorites        : string
+payment_method   : string
+country          : string
+total_hrs_played : float
+avg_rating_given : float
+
+content_creators.csv datatypes:
+--------------------------------------------------
+ID              : string
+Name            : string
+Country         : string
+Type_of_Content : string
+Average_Views   : integer
+Revenue         : float
+Primary_Game    : string
+
+steam_games.csv datatypes:
+--------------------------------------------------
+id                   : string
+Name                 : string
+Release date         : date
+Estimated owners     : integer
+Peak CCU             : integer
+Required age         : string
+Price                : float
+DLC count            : integer
+About the game       : list
+Supported languages  : list
+Full audio languages : list
+Reviews              : list
+Header image         : string
+Website              : string
+Support url          : string
+Support email        : string
+Windows              : boolean
+Mac                  : boolean
+Linux                : boolean
+Achievements         : integer
+Average hours played : float
+Developers           : string
+Publishers           : string
+Categories           : list
+Genres               : list
+Tags                 : list
+Screenshots          : list
+Movies               : list
+
+epic_games.csv datatypes:
+--------------------------------------------------
+game_id              : integer
+name                 : string
+game_slug            : string
+price                : float
+release_date         : date
+platform             : string
+description          : list
+developer            : string
+publisher            : string
+genres               : list
+Average hours played : float
+
+steam_players.csv datatypes:
+--------------------------------------------------
+id               : string
+name             : string
+username         : string
+age              : integer
+dob              : date
+email            : string
+phone            : string
+library          : list
+favorites        : list
+payment_method   : string
+country          : string
+total_hrs_played : float
+avg_rating_given : float
+
+developers.csv datatypes:
+--------------------------------------------------
+Developer                           : string
+Active                              : integer
+City                                : string
+Country                             : string
+Est.                                : date
+Notable games, series or franchises : list
+Notes                               : string
+
+modders.csv datatypes:
+--------------------------------------------------
+ID           : string
+Name         : string
+Type_of_Mod  : string
+Country      : string
+Primary_Game : string
+
+publishers.csv datatypes:
+--------------------------------------------------
+Publisher               : string
+Headquarters            : list
+Est.                    : integer
+Notable games published : list
+Notes                   : string
+Active                  : integer

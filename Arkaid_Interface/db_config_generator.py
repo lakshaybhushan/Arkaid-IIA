@@ -26,11 +26,11 @@ def generate_db_config() -> Dict:
     dbs = [
         {
             "name": "DB1",
-            "host": "localhost",
+            "host": "dakshdb.crcw0q6uux8e.ap-south-1.rds.amazonaws.com",
             "port": "5432",
-            "dbname": "arkaidDB",
-            "username": "arkaid",
-            "password": "arkaid"
+            "dbname": "postgres",
+            "username": "dakshdb",
+            "password": "dakshdb123"
         },
         {
             "name": "DB2",

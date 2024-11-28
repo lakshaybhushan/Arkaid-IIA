@@ -1,0 +1,20 @@
+{
+  "steam_games": {
+    "price": "game_price",
+    "release_date": "game_release_date",
+    "developers": "game_developers",
+    "publishers": "game_publishers",
+    "genres": "game_genres",
+    "id": "game_id",
+    "name": "game_name"
+  },
+  "epic_games": {
+    "game_id": "game_id",
+    "price": "game_price",
+    "release_date": "game_release_date",
+    "genres": "game_genres",
+    "developer": "game_developers",
+    "name": "game_name",
+    "publisher": "game_publishers"
+  }
+}

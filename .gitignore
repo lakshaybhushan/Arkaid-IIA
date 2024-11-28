@@ -8,3 +8,4 @@ ETL/data_sources
 arkaid_api/
 .venv
 __pycache__
+/old_data

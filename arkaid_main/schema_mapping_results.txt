@@ -1,0 +1,21 @@
+Schema Mapping Analysis Results
+==============================
+
+Steam Games (DB1) → MV Games (DB3)
+--------------------------------------------------------------------------------
+price                          → price                          (Score: 1.00)
+release_date                   → release_date                   (Score: 1.00)
+genres                         → genres                         (Score: 1.00)
+id                             → id                             (Score: 1.00)
+name                           → name                           (Score: 1.00)
+publishers                     → publisher                      (Score: 0.81)
+
+Epic Games (DB2) → MV Games (DB3)
+--------------------------------------------------------------------------------
+price                          → price                          (Score: 1.00)
+release_date                   → release_date                   (Score: 1.00)
+genres                         → genres                         (Score: 1.00)
+developer                      → developer                      (Score: 1.00)
+name                           → name                           (Score: 1.00)
+publisher                      → publisher                      (Score: 1.00)
+game_id                        → id                             (Score: 0.93)
