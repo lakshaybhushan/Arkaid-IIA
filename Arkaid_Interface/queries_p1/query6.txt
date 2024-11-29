@@ -1,0 +1,17 @@
+MAT_Developers with more than one platform
+---
+Finds the developers with more than one platform and their count of games.
+---
+SELECT 
+    game_developers, 
+    COUNT(DISTINCT game_id) AS total_games
+FROM 
+    mv_games
+WHERE 
+    game_platform IN ('Steam', 'Epic')
+GROUP BY 
+    game_developers
+HAVING 
+    COUNT(DISTINCT game_platform) > 1
+ORDER BY 
+    total_games DESC;

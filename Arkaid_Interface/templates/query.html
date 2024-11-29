@@ -12,7 +12,7 @@
         <nav class="query-nav">
             <a href="{{ url_for('index') }}" class="back-link">← All Queries</a>
             <div class="query-nav-links">
-                {% for qid, info in queries.items() %}
+                {% for qid, info in queries|dictsort %}
                 <a href="{{ url_for('show_query', query_id=qid) }}" 
                    class="query-link {% if qid == query_id %}active{% endif %}">
                     {{ info.title }}

@@ -1,0 +1,13 @@
+MV_Game Genres and their count
+---
+Finds the count of games for each genre in descending order.
+---
+SELECT 
+    game_genres, 
+    COUNT(DISTINCT game_id) AS total_games
+FROM 
+    mv_games
+GROUP BY 
+    game_genres
+ORDER BY 
+    total_games DESC;

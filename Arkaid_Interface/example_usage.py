@@ -542,7 +542,7 @@ class QueryAnalyzer:
         return parsed_columns
 
     def _convert_numeric_columns(self, df, table_name=None):
-        """Convert numeric columns to appropriate types."""
+        """Convert numeric columns to appropriate types while preserving HEX and UUID fields."""
         # List of known numeric columns (add more as needed)
         numeric_columns = {
             'steam_games': ['estimated_owners', 'price', 'rating', 'required_age'],
@@ -551,22 +551,37 @@ class QueryAnalyzer:
         }
         
         try:
-            # If table_name is provided, only convert columns for that table
+            # First identify and preserve HEX/UUID columns
+            id_columns = []
+            for column in df.columns:
+                col_lower = column.lower()
+                if ('_id' in col_lower or col_lower == 'id') and df[column].dtype == 'object':
+                    # Check if it looks like a UUID or HEX
+                    sample_value = df[column].iloc[0] if not df[column].empty else None
+                    if sample_value and (
+                        len(str(sample_value)) == 32 or  # HEX
+                        '-' in str(sample_value)  # UUID
+                    ):
+                        id_columns.append(column)
+            
+            # Convert numeric columns based on table configuration
             if table_name and table_name in numeric_columns:
                 cols_to_convert = numeric_columns[table_name]
                 for col in cols_to_convert:
-                    if col in df.columns:
+                    if col in df.columns and col not in id_columns:
                         df[col] = pd.to_numeric(df[col], errors='coerce')
             else:
-                # If no table_name provided, try to convert all known numeric columns
+                # Convert all known numeric columns except IDs
                 for table_cols in numeric_columns.values():
                     for col in table_cols:
-                        if col in df.columns:
+                        if col in df.columns and col not in id_columns:
                             df[col] = pd.to_numeric(df[col], errors='coerce')
             
-            # Also try to convert any column that looks numeric
+            # Try to convert any column that looks numeric, except IDs
             for col in df.columns:
-                if col.lower().endswith(('_count', '_amount', '_size', '_number', '_qty', '_id', '_owners')):
+                if col not in id_columns and col.lower().endswith(
+                    ('_count', '_amount', '_size', '_number', '_qty', '_owners')
+                ):
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                 
         except Exception as e:

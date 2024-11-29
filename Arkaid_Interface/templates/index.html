@@ -15,27 +15,58 @@
   </head>
   <body>
     <main>
-      <section class="intro-section">
-        <h1>Arkaid - Single Cohesive Interface for Gaming</h1>
-        <p class="intro-text">
-          Select a query to analyze its execution and results.
-        </p>
-      </section>
-
-      <section class="queries-list">
-        {% for query_id, info in queries.items() %}
-        <a
-          href="{{ url_for('show_query', query_id=query_id) }}"
-          class="query-card"
-        >
-          <h2>{{ info.title }}</h2>
-          <p>{{ info.description }}</p>
-          <div class="query-preview">
-            <pre class="code-block">{{ info.query.strip() }}</pre>
+      <nav class="main-nav">
+        <div class="nav-content">
+          <a href="{{ url_for('index') }}" class="nav-brand">Arkaid</a>
+          <div class="nav-links">
+            <a href="{{ url_for('index') }}" class="nav-link active">Queries</a>
+            <a href="{{ url_for('ai_page') }}" class="nav-link">AI Generator</a>
           </div>
-        </a>
-        {% endfor %}
-      </section>
+        </div>
+      </nav>
+
+      <div class="container">
+        <section class="intro-section">
+          <h1>Query Analysis</h1>
+          <p class="intro-text">
+            Explore and analyze pre-built queries or generate new ones using AI.
+          </p>
+        </section>
+
+        <section class="queries-list">
+          {# First show MAT_ queries #}
+          {% for query_id, info in queries.items() | sort(attribute='0') %}
+            {% if 'MAT_' in info.title %}
+              <a
+                href="{{ url_for('show_query', query_id=query_id) }}"
+                class="query-card"
+              >
+                <h2>{{ info.title }}</h2>
+                <p>{{ info.description }}</p>
+                <div class="query-preview">
+                  <pre class="code-block">{{ info.query.strip() }}</pre>
+                </div>
+              </a>
+            {% endif %}
+          {% endfor %}
+
+          {# Then show remaining queries #}
+          {% for query_id, info in queries.items() | sort(attribute='0') %}
+            {% if 'MAT_' not in info.title %}
+              <a
+                href="{{ url_for('show_query', query_id=query_id) }}"
+                class="query-card"
+              >
+                <h2>{{ info.title }}</h2>
+                <p>{{ info.description }}</p>
+                <div class="query-preview">
+                  <pre class="code-block">{{ info.query.strip() }}</pre>
+                </div>
+              </a>
+            {% endif %}
+          {% endfor %}
+        </section>
+      </div>
     </main>
   </body>
 </html>

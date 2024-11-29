@@ -165,25 +165,6 @@ databases:
       player_country: text
       player_platform: text
     type: materialized_view
-  - name: mv_game_player_content_region
-    columns:
-      game_id: uuid
-      game_name: text
-      game_genres: text
-      player_id: uuid
-      player_name: text
-      player_country: text
-      player_platform: text
-      modder_id: uuid
-      modder_name: text
-      modder_country: text
-      mod_type: text
-      content_creator_id: uuid
-      content_creator_name: text
-      content_creator_country: text
-      revenue: double precision
-      avg_views: integer
-    type: materialized_view
   - name: mv_cc_games
     columns:
       creator_id: text
@@ -215,4 +196,19 @@ databases:
       game_publishers: text
       game_genres: text
       game_platform: text
+    type: materialized_view
+  - name: mv_game_content_region
+    columns:
+      game_id: uuid
+      game_name: text
+      game_genres: text
+      modder_ids: text[]
+      modder_name: text[]
+      mod_type: text[]
+      modder_country: text[]
+      content_creator_id: text[]
+      content_creator_name: text[]
+      content_creator_country: text[]
+      total_revenue_generated: double precision[]
+      avg_views: integer[]
     type: materialized_view

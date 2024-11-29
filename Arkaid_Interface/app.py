@@ -4,6 +4,7 @@ import yaml
 import pandas as pd
 import time
 import os
+from ai import generate_sql_query
 
 app = Flask(__name__)
 
@@ -37,6 +38,34 @@ def load_queries_from_files():
                 }
     
     return queries
+
+def execute_sql_query(sql_query):
+    """Execute a SQL query and return the results"""
+    try:
+        # Create analyzer instance using config
+        analyzer = QueryAnalyzer('config.yaml')
+        
+        # Execute the query
+        result = analyzer.analyze_and_decompose_query(sql_query)
+        
+        # Handle the result
+        if isinstance(result, pd.DataFrame):
+            return {
+                'data': result.to_dict('records')[:10],  # Limit to first 10 rows
+                'columns': result.columns.tolist(),
+                'total_rows': len(result)
+            }
+        elif hasattr(analyzer, 'final_results'):
+            return {
+                'data': analyzer.final_results.to_dict('records')[:10],
+                'columns': analyzer.final_results.columns.tolist(),
+                'total_rows': len(analyzer.final_results)
+            }
+        else:
+            raise Exception("No results returned from query execution")
+            
+    except Exception as e:
+        raise Exception(f"Error executing query: {str(e)}")
 
 @app.route('/')
 def index():
@@ -114,5 +143,59 @@ def show_query(query_id):
         print(f"Error executing query: {str(e)}")  # Debug print
         return f"Error executing query: {str(e)}", 500
 
+@app.route('/ai')
+def ai_page():
+    """Render the AI SQL query generator page"""
+    return render_template('ai.html')
+
+@app.route('/generate-query', methods=['POST'])
+def generate_query():
+    """Generate SQL query from natural language input"""
+    user_input = request.form.get('user_input')
+    if not user_input:
+        return render_template('ai.html', error="Please provide input text")
+    
+    sql_query = generate_sql_query(user_input)
+    if not sql_query:
+        return render_template('ai.html', 
+                             error="Failed to generate SQL query",
+                             user_input=user_input)  # Keep the user input
+    
+    return render_template('ai.html', 
+                         sql_query=sql_query,
+                         user_input=user_input)  # Keep the user input
+
+@app.route('/execute-query', methods=['POST'])
+def execute_query():
+    """Execute the generated SQL query"""
+    sql_query = request.form.get('sql_query')
+    user_input = request.form.get('user_input')  # Get the original user input
+    
+    if not sql_query:
+        return render_template('ai.html', 
+                             error="No SQL query provided",
+                             user_input=user_input)
+    
+    try:
+        # Execute the query using your existing database connection
+        results = execute_sql_query(sql_query)
+        return render_template('ai.html', 
+                             sql_query=sql_query,
+                             results=results,
+                             user_input=user_input)  # Keep the user input
+    except Exception as e:
+        return render_template('ai.html', 
+                             sql_query=sql_query,
+                             error=f"Error executing query: {str(e)}",
+                             user_input=user_input)  # Keep the user input
+
 if __name__ == '__main__':
-    app.run(debug=True, port=3000) 
+    # Make sure all required files exist
+    if not os.path.exists('templates/ai.html'):
+        raise FileNotFoundError("Missing templates/ai.html")
+    if not os.path.exists('static/ai.css'):
+        raise FileNotFoundError("Missing static/ai.css")
+    if not os.path.exists('config.yaml'):
+        raise FileNotFoundError("Missing config.yaml")
+        
+    app.run(debug=True, port=4321) 

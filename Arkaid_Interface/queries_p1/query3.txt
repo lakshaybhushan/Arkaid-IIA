@@ -1,0 +1,14 @@
+
+MV_Top 10 Players by Library Size
+---
+Finds the top 10 players by library size.
+---
+SELECT 
+    mv.player_id,
+    mv.player_name,
+    mv.player_library_count AS library_size
+FROM 
+    mv_players mv
+ORDER BY 
+    mv.player_library_count DESC
+LIMIT 10;

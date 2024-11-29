@@ -1,0 +1,15 @@
+DLC Less Games
+---
+Finds games with no DLC and their price.
+---
+SELECT 
+    sg.id AS game_id,
+    sg.name AS game_name,
+    sg.price,
+    sg.dlc_count
+FROM 
+    steam_games sg
+WHERE 
+    sg.dlc_count = 0
+ORDER BY 
+    sg.price DESC;

@@ -1,8 +1,16 @@
-US Developer Games
+MAT_Modders in the United States
 ---
-This query finds games developed by US-based developers and counts how many developers each game has.
+Finds the modder name, mod type, and total mods created by each modder for the United States.
 ---
-SELECT mv.game_name, mv.game_platform, m.Name
-FROM mv_games mv
-JOIN modders m ON mv.game_name = m.Primary_Game
-WHERE m.Type_of_Mod = 'Bug Fix';
+SELECT 
+    modder_name, 
+    mod_type, 
+    COUNT(game_id) AS total_mods
+FROM 
+    mv_game_content_region
+WHERE 
+    'United States' = ANY(modder_country)
+GROUP BY 
+    modder_name, mod_type
+ORDER BY 
+    total_mods DESC;

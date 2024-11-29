@@ -1,0 +1,15 @@
+MV_Library Count and Total Hours Played For Each Player
+---
+Finds the player id, library count, and total hours played for each player in descending order of total hours played.
+---
+SELECT 
+    player_id, 
+    player_name,
+    player_library_count, 
+    SUM(player_total_hrs_played) AS total_hrs_played
+FROM 
+    mv_players
+GROUP BY 
+    player_id, player_library_count, player_name
+ORDER BY 
+    total_hrs_played DESC;

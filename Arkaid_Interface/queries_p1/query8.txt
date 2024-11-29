@@ -1,0 +1,14 @@
+MAT_Top 10 Games by Total Revenue Generated
+---
+Finds the top 10 games by total revenue generated.
+---
+SELECT 
+    primary_game_name AS game_name,
+    SUM(total_revenue_generated) AS total_creator_revenue
+FROM 
+    mv_cc_games
+GROUP BY 
+    primary_game_name
+ORDER BY 
+    total_creator_revenue DESC
+LIMIT 10;

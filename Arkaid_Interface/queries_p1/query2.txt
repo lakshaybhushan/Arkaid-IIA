@@ -1,12 +1,15 @@
-Popular Game Analysis
+Steam Games with over 10 achievements
 ---
-Analyzes games with high player counts and their corresponding developers.
+Finds games with over 10 achievements and their achievements.
 ---
 SELECT 
-    g.game_name,
-    g.player_count,
-    d.developer_name
-FROM games g
-JOIN developers d ON g.developer_id = d.id
-WHERE g.player_count > 1000
-ORDER BY g.player_count DESC; 
+    sg.id AS game_id,
+    sg.name AS game_name,
+    sg.achievements
+FROM 
+    steam_games sg
+WHERE 
+    sg.achievements > 10
+ORDER BY 
+    sg.achievements DESC
+LIMIT 10;

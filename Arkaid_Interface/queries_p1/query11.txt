@@ -1,0 +1,12 @@
+MAT_Quality of Life Mods
+---
+Finds the quality of life mods.
+---
+SELECT 
+    game_name
+FROM 
+    mv_game_content_region
+WHERE 
+    'Quality of Life' = ANY (mod_type)
+ORDER BY 
+    game_name ASC;

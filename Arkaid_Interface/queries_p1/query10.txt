@@ -1,0 +1,16 @@
+
+MAT_Finding the top games by modder count
+---
+Finds the game name and modder count for each game.
+---
+SELECT 
+    mv.game_name,
+    COUNT(DISTINCT modder_ids) AS modder_count
+FROM 
+    mv_game_content_region mv
+WHERE 
+    modder_ids IS NOT NULL
+GROUP BY 
+    mv.game_name
+ORDER BY 
+    modder_count DESC;

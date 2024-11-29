@@ -1,0 +1,19 @@
+Top games by mod count
+---
+Finds the game id, game name, average hours played, and mod count for each game.
+---
+SELECT 
+    sg.id AS game_id,
+    sg.name AS game_name,
+    sg.average_hours_played,
+    COUNT(m.id) AS mod_count
+FROM 
+    steam_games sg
+JOIN 
+    modders m
+ON 
+    sg.name = m.primary_game
+GROUP BY 
+    sg.id, sg.name, sg.average_hours_played
+ORDER BY 
+    sg.average_hours_played DESC;

@@ -3,6 +3,7 @@ import sqlparse
 from sqlparse.sql import IdentifierList, Identifier, Token
 from sqlparse.tokens import Keyword, DML
 import re
+import pandas as pd
 
 class QueryDecomposer:
     def __init__(self, query, db_config):
@@ -400,3 +401,28 @@ class QueryDecomposer:
         where_clause = re.sub(r"'([^']*)'", r'"\1"', where_clause)
         
         return where_clause
+    
+    def _convert_numeric_columns(self, df, table_schema=None):
+        """Convert numeric columns to appropriate types, preserving HEX and UUID fields."""
+        # Skip conversion for known ID columns that are HEX or UUID
+        for column in df.columns:
+            col_lower = column.lower()
+            
+            # Skip conversion for hex/uuid ID columns
+            if ('_id' in col_lower or col_lower == 'id') and df[column].dtype == 'object':
+                # Check if it looks like a UUID or HEX
+                sample_value = df[column].iloc[0] if not df[column].empty else None
+                if sample_value and (
+                    len(str(sample_value)) == 32 or  # HEX
+                    '-' in str(sample_value)  # UUID
+                ):
+                    continue
+                
+            # For other numeric-looking columns, attempt conversion
+            if any(suffix in col_lower for suffix in ('_count', '_amount', '_size', '_number', '_qty', '_owners')):
+                try:
+                    df[column] = pd.to_numeric(df[column], errors='coerce')
+                except Exception:
+                    continue
+
+        return df
