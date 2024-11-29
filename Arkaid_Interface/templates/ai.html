@@ -1,103 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI SQL Query Generator - Arkaid</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='ai.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='ai.css') }}" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
     <main>
-        <nav class="query-nav">
-            <a href="{{ url_for('index') }}" class="back-link">← Back to Home</a>
-        </nav>
+      <nav class="query-nav">
+        <a href="{{ url_for('index') }}" class="back-link">← Back to Home</a>
+      </nav>
 
-        <section class="ai-section">
-            <h1>Arkaidian AI</h1>
-            <p class="intro-text">Transform your questions into SQL queries using advanced AI</p>
+      <section class="ai-section">
+        <h1>Arkaidian AI</h1>
+        <p class="intro-text">
+          Transform your questions into SQL queries using advanced AI
+        </p>
 
-            <form id="queryForm" method="POST" action="{{ url_for('generate_query') }}" class="query-form">
-                <div class="input-group">
-                    <label for="userInput">What would you like to know?</label>
-                    <textarea 
-                        id="userInput" 
-                        name="user_input" 
-                        placeholder="Example: Show me the top 5 players who have spent the most hours playing games from Epic Games"
-                        required
-                    >{{ user_input if user_input else '' }}</textarea>
-                </div>
+        <form
+          id="queryForm"
+          method="POST"
+          action="{{ url_for('generate_query') }}"
+          class="query-form"
+        >
+          <div class="input-group">
+            <label for="userInput">What would you like to know?</label>
+            <textarea
+              id="userInput"
+              name="user_input"
+              placeholder="Example: Show me the top 5 players who have spent the most hours playing games from Epic Games"
+              required
+            >
+{{ user_input if user_input else '' }}</textarea
+            >
+          </div>
 
-                <button type="submit" class="btn btn-primary" id="generateBtn">Generate SQL Query</button>
-            </form>
+          <button type="submit" class="btn btn-primary" id="generateBtn">
+            Generate SQL Query
+          </button>
+        </form>
 
-            {% if sql_query %}
-            <div class="result-section">
-                <h2>Generated SQL Query</h2>
-                <div class="query-container">
-                    <button class="copy-button" onclick="copyQuery()">Copy</button>
-                    <pre class="code-block"><code>{{ sql_query }}</code></pre>
-                </div>
-                
-                <form action="{{ url_for('execute_query') }}" method="POST" class="execute-form">
-                    <input type="hidden" name="sql_query" value="{{ sql_query }}">
-                    <input type="hidden" name="user_input" value="{{ user_input }}">
-                    <button type="submit" class="btn btn-secondary">Execute Query</button>
-                </form>
-            </div>
-            {% endif %}
+        {% if sql_query %}
+        <div class="result-section">
+          <h2>Generated SQL Query</h2>
+          <div class="query-container">
+            <button class="copy-button" onclick="copyQuery()">Copy</button>
+            <pre class="code-block"><code>{{ sql_query }}</code></pre>
+          </div>
 
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
+          <form
+            action="{{ url_for('execute_query') }}"
+            method="POST"
+            class="execute-form"
+          >
+            <input type="hidden" name="sql_query" value="{{ sql_query }}" />
+            <input type="hidden" name="user_input" value="{{ user_input }}" />
+            <button type="submit" class="btn btn-secondary">
+              Execute Query
+            </button>
+          </form>
+        </div>
+        {% endif %} {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %} {% if results %}
+        <div class="results-section">
+          <h2>Query Results</h2>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  {% for column in results.columns %}
+                  <th>{{ column }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in results.data %}
+                <tr>
+                  {% for column in results.columns %}
+                  <td>{{ row[column] }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
-            {% if results %}
-            <div class="results-section">
-                <h2>Query Results</h2>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                {% for column in results.columns %}
-                                <th>{{ column }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in results.data %}
-                            <tr>
-                                {% for column in results.columns %}
-                                <td>{{ row[column] }}</td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% endif %}
-        </section>
+          <form action="{{ url_for('generate_fun_fact_route') }}" method="POST" class="fun-fact-form">
+            <input type="hidden" name="results_data" value='{{ results.data|tojson|safe }}' />
+            <input type="hidden" name="sql_query" value="{{ sql_query }}" />
+            <input type="hidden" name="user_input" value="{{ user_input }}" />
+            <button type="submit" class="btn btn-secondary">Generate Fun Fact</button>
+          </form>
+
+          {% if fun_fact %}
+          <div class="fun-fact-section">
+            <h3>Gaming Fun Fact</h3>
+            <p class="fun-fact">{{ fun_fact }}</p>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
     </main>
 
     <script>
-        function copyQuery() {
-            const queryText = document.querySelector('.code-block').textContent;
-            navigator.clipboard.writeText(queryText).then(() => {
-                const copyBtn = document.querySelector('.copy-button');
-                copyBtn.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy';
-                }, 2000);
-            });
-        }
+      function copyQuery() {
+        const queryText = document.querySelector(".code-block").textContent;
+        navigator.clipboard.writeText(queryText).then(() => {
+          const copyBtn = document.querySelector(".copy-button");
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy";
+          }, 2000);
+        });
+      }
 
-        // Add loading state to form submission
-        document.getElementById('queryForm').addEventListener('submit', function() {
-            const btn = document.getElementById('generateBtn');
-            btn.disabled = true;
-            btn.textContent = 'Generating...';
+      // Add loading state to form submission
+      document
+        .getElementById("queryForm")
+        .addEventListener("submit", function () {
+          const btn = document.getElementById("generateBtn");
+          btn.disabled = true;
+          btn.textContent = "Generating...";
         });
     </script>
-</body>
-</html> 
+  </body>
+</html>

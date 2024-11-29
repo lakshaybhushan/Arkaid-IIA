@@ -60,3 +60,39 @@ def generate_sql_query(user_input: str) -> str:
         print(f"Error generating SQL query: {str(e)}")
         return None
 
+def generate_fun_fact(query_results) -> str:
+    """Generate a gaming-related fun fact based on query results"""
+    
+    # Create a prompt that includes the query results
+    system_prompt = """You are a gaming expert. Generate a short, interesting gaming-related fun fact based on the provided query results. 
+    The fact should be directly related to the data shown and should provide additional context or interesting information.
+    Keep the response under 2 sentences and make it engaging."""
+    
+    # Convert results to a readable format
+    results_text = str(query_results)
+    
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt
+        },
+        {
+            "role": "user",
+            "content": f"Generate a fun gaming fact based on these results: {results_text}"
+        }
+    ]
+
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            temperature=0.7,
+            max_tokens=150
+        )
+        
+        return chat_completion.choices[0].message.content.strip()
+        
+    except Exception as e:
+        print(f"Error generating fun fact: {str(e)}")
+        return None
+

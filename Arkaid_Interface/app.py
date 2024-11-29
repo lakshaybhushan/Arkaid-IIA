@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from example_usage import QueryAnalyzer
 import yaml
 import pandas as pd
 import time
 import os
-from ai import generate_sql_query
+from ai import generate_sql_query, generate_fun_fact
+import json
 
 app = Flask(__name__)
 
@@ -169,7 +170,7 @@ def generate_query():
 def execute_query():
     """Execute the generated SQL query"""
     sql_query = request.form.get('sql_query')
-    user_input = request.form.get('user_input')  # Get the original user input
+    user_input = request.form.get('user_input')
     
     if not sql_query:
         return render_template('ai.html', 
@@ -177,17 +178,46 @@ def execute_query():
                              user_input=user_input)
     
     try:
-        # Execute the query using your existing database connection
         results = execute_sql_query(sql_query)
         return render_template('ai.html', 
                              sql_query=sql_query,
                              results=results,
-                             user_input=user_input)  # Keep the user input
+                             user_input=user_input)
     except Exception as e:
         return render_template('ai.html', 
                              sql_query=sql_query,
                              error=f"Error executing query: {str(e)}",
-                             user_input=user_input)  # Keep the user input
+                             user_input=user_input)
+
+@app.route('/generate_fun_fact', methods=['POST'])
+def generate_fun_fact_route():
+    """Generate a fun fact based on query results"""
+    try:
+        results_data = request.form.get('results_data')
+        sql_query = request.form.get('sql_query')
+        user_input = request.form.get('user_input')
+        
+        if results_data:
+            # Parse the JSON data
+            results_data = json.loads(results_data)
+            
+            # Generate the fun fact
+            fun_fact = generate_fun_fact(results_data[:3])  # Use first 3 results for context
+            
+            # Return the template with all necessary data
+            return render_template('ai.html', 
+                                results={"data": results_data, "columns": list(results_data[0].keys())}, 
+                                fun_fact=fun_fact,
+                                sql_query=sql_query,
+                                user_input=user_input)
+    except Exception as e:
+        print(f"Error generating fun fact: {str(e)}")
+        return render_template('ai.html', 
+                             error=f"Error generating fun fact: {str(e)}",
+                             sql_query=sql_query,
+                             user_input=user_input)
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     # Make sure all required files exist
