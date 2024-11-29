@@ -9,6 +9,7 @@ from rich.table import Table
 from rich import print as rprint
 from datetime import datetime
 import os
+import re
 
 class QueryAnalyzer:
     def __init__(self, db_config_path):
@@ -205,16 +206,17 @@ class QueryAnalyzer:
         
         # Apply WHERE conditions if present
         if 'WHERE' in query.upper():
-            where_clause = query.upper().split('WHERE')[1].split(';')[0].strip()
-            # Get the part before ORDER BY/GROUP BY/HAVING if present
-            for keyword in ['ORDER BY', 'GROUP BY', 'HAVING']:
-                if keyword in where_clause.upper():
-                    where_clause = where_clause.split(keyword)[0]
+            where_start = query.upper().find('WHERE')
+            where_end = len(query)
+            for keyword in ['GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT']:
+                pos = query.upper().find(keyword)
+                if pos != -1 and pos < where_end:
+                    where_end = pos
             
+            where_clause = query[where_start + 5:where_end].strip()
             where_clause = self.convert_sql_where_to_pandas(where_clause)
             rprint(f"[cyan]Applying WHERE clause: {where_clause}[/cyan]")
             try:
-                # Convert column types before applying where clause
                 result_df = self._convert_numeric_columns(result_df)
                 result_df = result_df.query(where_clause)
                 rprint(f"[green]WHERE clause applied successfully. {len(result_df)} rows remaining.[/green]")
@@ -222,6 +224,106 @@ class QueryAnalyzer:
                 rprint(f"[red]Error applying WHERE clause: {str(e)}[/red]")
                 rprint(f"[yellow]Available columns: {result_df.columns.tolist()}[/yellow]")
                 rprint(f"[yellow]Column types: {result_df.dtypes.to_dict()}[/yellow]")
+
+        # Apply GROUP BY if present
+        group_match = re.search(r'\bGROUP\s+BY\s+([^;]+?)(?:\s+(?:HAVING|ORDER|LIMIT)|;|$)', query, re.IGNORECASE | re.DOTALL)
+        if group_match:
+            group_cols = [col.strip() for col in group_match.group(1).split(',')]
+            # Remove table aliases from group columns
+            group_cols = [col.split('.')[-1].strip() for col in group_cols]
+            
+            # Find aggregation functions in SELECT clause
+            select_clause = query.upper().split('FROM')[0].replace('SELECT', '').strip()
+            agg_pattern = r'(COUNT|SUM|AVG|MAX|MIN)\s*\(\s*\*?\s*\)(?:\s+AS\s+([a-zA-Z0-9_]+))?'
+            agg_matches = re.finditer(agg_pattern, select_clause, re.IGNORECASE)
+            
+            # Handle aggregations
+            agg_funcs = {}
+            agg_aliases = {}  # Store original aliases
+            for match in agg_matches:
+                agg_func = match.group(1).lower()
+                alias = match.group(2)
+                if alias:
+                    # Store the original alias case
+                    original_alias = re.search(rf'\b{alias}\b', query, re.IGNORECASE).group(0)
+                    agg_aliases[alias.lower()] = original_alias
+                    # If there's an alias, use it as the column name
+                    if agg_func == 'count':
+                        agg_funcs['size'] = original_alias  # Use size() for COUNT(*)
+                    else:
+                        agg_funcs[agg_func] = original_alias
+                else:
+                    # If no alias, use the function name
+                    if agg_func == 'count':
+                        agg_funcs['size'] = f'{agg_func}_star'
+                    else:
+                        agg_funcs[agg_func] = f'{agg_func}_result'
+            
+            # Apply groupby with aggregation
+            if agg_funcs:
+                # For COUNT(*), we need special handling
+                if 'size' in agg_funcs:
+                    # Group by the columns and get the size
+                    result_df = result_df.groupby(group_cols, as_index=False).size()
+                    # Rename the 'size' column to the specified alias
+                    result_df = result_df.rename(columns={'size': agg_funcs['size']})
+                else:
+                    # For other aggregations
+                    result_df = result_df.groupby(group_cols, as_index=False).agg(agg_funcs)
+                
+                rprint(f"[green]Applied GROUP BY on {group_cols} with aggregations {agg_funcs}[/green]")
+            else:
+                result_df = result_df.groupby(group_cols, as_index=False).size()
+                rprint(f"[green]Applied GROUP BY on {group_cols}[/green]")
+
+        # Apply ORDER BY if present
+        order_match = re.search(r'\bORDER\s+BY\s+([^;]+?)(?:\s+LIMIT|;|$)', query, re.IGNORECASE | re.DOTALL)
+        if order_match:
+            order_cols = []
+            ascending = []
+            
+            for item in order_match.group(1).split(','):
+                item = item.strip()
+                if ' DESC' in item.upper():
+                    col = item.replace(' DESC', '').replace(' desc', '').strip()
+                    col = col.split('.')[-1].strip()  # Remove table alias
+                    # Try to match case-insensitive column name
+                    col_lower = col.lower()
+                    if col_lower in [c.lower() for c in result_df.columns]:
+                        actual_col = next(c for c in result_df.columns if c.lower() == col_lower)
+                        order_cols.append(actual_col)
+                        ascending.append(False)
+                else:
+                    col = item.replace(' ASC', '').replace(' asc', '').strip()
+                    col = col.split('.')[-1].strip()  # Remove table alias
+                    # Try to match case-insensitive column name
+                    col_lower = col.lower()
+                    if col_lower in [c.lower() for c in result_df.columns]:
+                        actual_col = next(c for c in result_df.columns if c.lower() == col_lower)
+                        order_cols.append(actual_col)
+                        ascending.append(True)
+            
+            try:
+                if order_cols:  # Only proceed if we have columns to sort by
+                    result_df = result_df.sort_values(by=order_cols, ascending=ascending)
+                    direction_str = 'DESC' if ascending and not ascending[0] else 'ASC'
+                    rprint(f"[green]Applied ORDER BY {order_cols} {direction_str}[/green]")
+                else:
+                    rprint("[yellow]Warning: No valid columns found for ORDER BY[/yellow]")
+                    rprint(f"[yellow]Available columns: {result_df.columns.tolist()}[/yellow]")
+            except KeyError as e:
+                rprint(f"[red]Error in ORDER BY: Column {e} not found[/red]")
+                rprint(f"[yellow]Available columns: {result_df.columns.tolist()}[/yellow]")
+            except Exception as e:
+                rprint(f"[red]Error applying ORDER BY: {str(e)}[/red]")
+                rprint(f"[yellow]Available columns: {result_df.columns.tolist()}[/yellow]")
+
+        # Apply LIMIT at the end if present
+        limit_match = re.search(r'\bLIMIT\s+(\d+)', query, re.IGNORECASE)
+        if limit_match:
+            limit_value = int(limit_match.group(1))
+            result_df = result_df.head(limit_value)
+            rprint(f"[green]Applied LIMIT {limit_value}[/green]")
         
         self.console.rule("[bold blue]Final Results")
         self.display_results(result_df, "Final Combined Results")
@@ -316,26 +418,56 @@ class QueryAnalyzer:
 
     def convert_sql_where_to_pandas(self, where_clause):
         """Convert SQL WHERE clause to pandas query syntax."""
-        # Remove table aliases from the where clause
-        for table in self.analysis['tables_involved']:
-            alias = table['alias'].upper()
-            where_clause = where_clause.replace(f"{alias}.", "")
+        # Store string literals with their original case
+        string_literals = {}
+        literal_count = 0
+        string_pattern = r"'([^']*)'"
         
-        # Convert column names to lowercase to match DataFrame columns
+        def replace_literal(match):
+            nonlocal literal_count
+            literal = match.group(1)
+            placeholder = f"__STRING_LITERAL_{literal_count}__"
+            string_literals[placeholder] = literal
+            literal_count += 1
+            return placeholder
+        
+        # Replace string literals with placeholders
+        where_clause = re.sub(string_pattern, replace_literal, where_clause)
+        
+        # Remove table aliases from the where clause
+        # Look for patterns like "alias.column" and replace with just "column"
+        alias_pattern = r'([a-zA-Z_][a-zA-Z0-9_]*)\.'
+        where_clause = re.sub(alias_pattern, '', where_clause)
+        
+        # Convert column names and operators to lowercase
         where_clause = where_clause.lower()
         
         # Basic conversions
-        where_clause = where_clause.replace('and', '&')
-        where_clause = where_clause.replace('or', '|')
-        where_clause = where_clause.replace('=', '==')
+        where_clause = where_clause.replace(' and ', ' & ')
+        where_clause = where_clause.replace(' or ', ' | ')
+        where_clause = where_clause.replace(' = ', ' == ')
         where_clause = where_clause.replace('<>', '!=')
         
-        # Handle aggregate functions
-        agg_funcs = ['SUM', 'COUNT', 'AVG', 'MAX', 'MIN']
-        for func in agg_funcs:
-            where_clause = where_clause.replace(func.lower(), func)
+        # Handle LIKE operator
+        if ' like ' in where_clause:
+            # Replace LIKE with str.contains() for pandas
+            like_parts = where_clause.split(' like ')
+            column = like_parts[0].strip()
+            pattern = like_parts[1].strip()
+            
+            # Get the original string literal
+            for placeholder, original in string_literals.items():
+                if placeholder.lower() in pattern.lower():
+                    # Convert SQL LIKE pattern to regex pattern
+                    pattern = original.replace('%', '.*').replace('_', '.')
+                    # Reconstruct where clause using str.contains()
+                    where_clause = f"{column}.str.contains('{pattern}', case=False, regex=True, na=False)"
+                    break
+        else:
+            # Restore string literals with their original case for non-LIKE conditions
+            for placeholder, original in string_literals.items():
+                where_clause = where_clause.replace(placeholder.lower(), f"'{original}'")
         
-        rprint(f"[cyan]Converted clause: {where_clause}[/cyan]")
         return where_clause
 
     def save_results_to_file(self, query, analysis, subqueries, final_df):
@@ -424,15 +556,12 @@ class QueryAnalyzer:
 if __name__ == "__main__":
     analyzer = QueryAnalyzer('config.yaml')
     query = """
-SELECT 
-    mp.player_country, 
-    COUNT(mp.player_id) AS total_players, 
-    AVG(mp.player_avg_rating_given) AS avg_rating_given
-FROM mv_players mp
-GROUP BY mp.player_country
-ORDER BY total_players DESC;
-
-
-    """
+SELECT mv.game_name, COUNT(DISTINCT mv.game_developers) AS developer_count
+FROM mv_games mv
+JOIN developers d ON mv.game_developers = d.Developer
+WHERE d.Country LIKE '%States%'
+GROUP BY mv.game_name
+ORDER BY developer_count DESC;  
+"""
     analyzer.analyze_and_decompose_query(query)
     

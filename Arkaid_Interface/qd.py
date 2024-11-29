@@ -203,6 +203,44 @@ class QueryDecomposer:
                                 table_columns.add(join_column)
                                 base_columns.add(join_column.lower())
         
+        # Add columns used in GROUP BY
+        if 'GROUP BY' in self.query.upper():
+            group_clause = re.search(r'GROUP\s+BY\s+([^;]+?)(?:\s+(?:HAVING|ORDER|LIMIT)|;|$)', 
+                                   self.query, re.IGNORECASE | re.DOTALL)
+            if group_clause:
+                group_cols = group_clause.group(1).split(',')
+                for col in group_cols:
+                    col = col.strip()
+                    if '.' in col:
+                        col_alias, col_name = col.split('.')
+                        if col_alias.strip().upper() == table_alias.upper():
+                            col_name = col_name.strip().lower()
+                            if table_schema:
+                                col_name = self._get_correct_case(col_name, table_schema)
+                            if col_name.lower() not in base_columns:
+                                table_columns.add(col_name)
+                                base_columns.add(col_name.lower())
+        
+        # Add columns used in WHERE clause
+        if 'WHERE' in self.query.upper():
+            where_clause = self.query.upper().split('WHERE')[1]
+            for keyword in ['GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT']:
+                if keyword in where_clause:
+                    where_clause = where_clause.split(keyword)[0]
+            where_clause = where_clause.split(';')[0].strip()
+            
+            where_parts = re.findall(r'([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)', where_clause)
+            for part in where_parts:
+                where_table_alias, where_column = part.split('.')
+                where_table_alias = where_table_alias.strip()
+                if where_table_alias.upper() == table_alias.upper():
+                    where_column = where_column.strip().lower()
+                    if table_schema:
+                        where_column = self._get_correct_case(where_column, table_schema)
+                    if where_column.lower() not in base_columns:
+                        table_columns.add(where_column)
+                        base_columns.add(where_column.lower())
+        
         # Then handle selected columns
         for col in columns:
             col_table_alias = col.get('table_alias', '').upper()
@@ -210,8 +248,22 @@ class QueryDecomposer:
                 column = col['column']
                 
                 # Handle aggregate functions
-                if any(agg in column.upper() for agg in ('SUM(', 'COUNT(', 'AVG(', 'MAX(', 'MIN(')):
-                    table_columns.add(column)
+                if any(agg in column.upper() for agg in ('COUNT(', 'SUM(', 'AVG(', 'MAX(', 'MIN(')):
+                    # For COUNT(*), we don't need to add any columns
+                    if column.upper() == 'COUNT(*)':
+                        continue
+                    # For other aggregates, extract the column name
+                    match = re.search(r'\((.*?)\)', column)
+                    if match:
+                        agg_col = match.group(1).strip()
+                        if '.' in agg_col:
+                            _, agg_col = agg_col.split('.')
+                        agg_col = agg_col.lower()
+                        if table_schema:
+                            agg_col = self._get_correct_case(agg_col, table_schema)
+                        if agg_col.lower() not in base_columns:
+                            table_columns.add(agg_col)
+                            base_columns.add(agg_col.lower())
                 else:
                     # For regular columns
                     if '.' in column:

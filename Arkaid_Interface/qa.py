@@ -39,6 +39,7 @@ class QueryInsights:
                 'grouping': self._analyze_grouping(),
                 'having': self._analyze_having(),
                 'ordering': self._analyze_ordering(),
+                'limit': self._analyze_limit(),
                 'performance_tips': self._generate_performance_tips()
             }
             
@@ -170,11 +171,26 @@ class QueryInsights:
             return None
     
     def _analyze_grouping(self):
+        """Analyze GROUP BY clause in detail."""
         try:
-            group_pattern = r'GROUP BY\s+(.*?)(?:\s+(?:HAVING|ORDER BY)|;|\s*$)'
+            group_pattern = r'GROUP\s+BY\s+([^;]+?)(?:\s+(?:HAVING|ORDER|LIMIT)|;|$)'
             match = re.search(group_pattern, self.query, re.IGNORECASE | re.DOTALL)
             if match:
-                return match.group(1).strip()
+                group_cols = []
+                for col in match.group(1).split(','):
+                    col = col.strip()
+                    if '.' in col:
+                        table_alias, col_name = col.split('.')
+                        group_cols.append({
+                            'table_alias': table_alias.strip(),
+                            'column': col_name.strip()
+                        })
+                    else:
+                        group_cols.append({
+                            'table_alias': None,
+                            'column': col.strip()
+                        })
+                return group_cols
             return None
         except Exception:
             return None
@@ -215,6 +231,16 @@ class QueryInsights:
                     })
                 
                 return orders
+            return None
+        except Exception:
+            return None
+    
+    def _analyze_limit(self):
+        """Extract LIMIT value from query if present."""
+        try:
+            limit_match = re.search(r'\bLIMIT\s+(\d+)', self.query, re.IGNORECASE)
+            if limit_match:
+                return int(limit_match.group(1))
             return None
         except Exception:
             return None
