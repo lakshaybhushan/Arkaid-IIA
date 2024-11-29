@@ -110,16 +110,19 @@ class QueryAnalyzer:
         
         if not has_joins:
             # For simple queries without JOINs, use direct psycopg2 execution
-            self._execute_simple_query(query)
+            result_df = self._execute_simple_query(query)
+            if isinstance(result_df, pd.DataFrame):
+                self.final_results = result_df
+                return result_df
         else:
             # For queries with JOINs, use the existing DataFrame approach
-            self._execute_complex_query(query)
+            return self._execute_complex_query(query)
 
     def _execute_simple_query(self, query):
         """Execute a simple query directly using psycopg2."""
         if not self.analysis['tables_involved']:
             rprint("[red]Error: No tables found in query[/red]")
-            return
+            return None
         
         first_table = self.analysis['tables_involved'][0]['name']
         
@@ -134,7 +137,7 @@ class QueryAnalyzer:
         
         if not db_name or db_name not in self.connections:
             rprint(f"[red]Error: Could not find database for table {first_table}[/red]")
-            return
+            return None
         
         conn = self.connections[db_name]
         try:
@@ -170,8 +173,15 @@ class QueryAnalyzer:
                 # Save results to file
                 self.save_results_to_file(query, self.analysis, {first_table: query}, df)
                 
+                # Store the final results for the web interface
+                self.final_results = df
+                
+                # Return the DataFrame for the web interface
+                return df
+                
         except Exception as e:
             rprint(f"[red]Error executing query: {str(e)}[/red]")
+            return None
 
     def _execute_complex_query(self, query):
         """Execute a complex query with JOINs using the DataFrame approach."""
@@ -182,6 +192,7 @@ class QueryAnalyzer:
         # Store DataFrames for each table
         dataframes = {}
         error_messages = []
+        self.subquery_results = {}  # Store subquery results
         
         rprint("\n[green]Executing Subqueries:[/green]")
         for table, subquery in subqueries.items():
@@ -194,6 +205,13 @@ class QueryAnalyzer:
                 # Convert numeric columns for this table
                 df = self._convert_numeric_columns(df, table)
                 dataframes[table] = df
+                # Store subquery results
+                self.subquery_results[table] = {
+                    'query': subquery,
+                    'results': df,
+                    'columns': df.columns.tolist(),
+                    'total_rows': len(df)
+                }
                 self.display_results(df, f"Results for {table}")
 
         if error_messages:
@@ -330,6 +348,9 @@ class QueryAnalyzer:
         
         # Save results to file
         self.save_results_to_file(query, self.analysis, subqueries, result_df)
+        
+        # Store the final results
+        self.final_results = result_df
 
     def perform_joins(self, dataframes, joins):
         """Perform joins between DataFrames based on join conditions."""
@@ -556,12 +577,19 @@ class QueryAnalyzer:
 if __name__ == "__main__":
     analyzer = QueryAnalyzer('config.yaml')
     query = """
-SELECT mv.game_name, COUNT(DISTINCT mv.game_developers) AS developer_count
-FROM mv_games mv
-JOIN developers d ON mv.game_developers = d.Developer
-WHERE d.Country LIKE '%States%'
-GROUP BY mv.game_name
-ORDER BY developer_count DESC;  
+SELECT 
+    game_genres,
+    player_country,
+    COUNT(DISTINCT player_id) AS total_players,
+    COUNT(DISTINCT game_developers) AS active_developers
+FROM 
+    mv_game_player_content_region
+WHERE 
+    player_country = 'India'
+GROUP BY 
+    game_genres, player_country
+ORDER BY 
+    total_players DESC, active_developers DESC;
 """
     analyzer.analyze_and_decompose_query(query)
     

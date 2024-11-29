@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arkaid - Query Analysis</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main>
+      <section class="intro-section">
+        <h1>Arkaid - Single Cohesive Interface for Gaming</h1>
+        <p class="intro-text">
+          Select a query to analyze its execution and results.
+        </p>
+      </section>
+
+      <section class="queries-list">
+        {% for query_id, info in queries.items() %}
+        <a
+          href="{{ url_for('show_query', query_id=query_id) }}"
+          class="query-card"
+        >
+          <h2>{{ info.title }}</h2>
+          <p>{{ info.description }}</p>
+          <div class="query-preview">
+            <pre class="code-block">{{ info.query.strip() }}</pre>
+          </div>
+        </a>
+        {% endfor %}
+      </section>
+    </main>
+  </body>
+</html>

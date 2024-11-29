@@ -1,0 +1,12 @@
+Popular Game Analysis
+---
+Analyzes games with high player counts and their corresponding developers.
+---
+SELECT 
+    g.game_name,
+    g.player_count,
+    d.developer_name
+FROM games g
+JOIN developers d ON g.developer_id = d.id
+WHERE g.player_count > 1000
+ORDER BY g.player_count DESC; 

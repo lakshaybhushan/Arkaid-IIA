@@ -1,0 +1,8 @@
+US Developer Games
+---
+This query finds games developed by US-based developers and counts how many developers each game has.
+---
+SELECT mv.game_name, mv.game_platform, m.Name
+FROM mv_games mv
+JOIN modders m ON mv.game_name = m.Primary_Game
+WHERE m.Type_of_Mod = 'Bug Fix';

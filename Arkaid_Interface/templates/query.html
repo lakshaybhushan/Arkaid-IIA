@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ query_info.title }} - Arkaid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <main>
+        <nav class="query-nav">
+            <a href="{{ url_for('index') }}" class="back-link">← All Queries</a>
+            <div class="query-nav-links">
+                {% for qid, info in queries.items() %}
+                <a href="{{ url_for('show_query', query_id=qid) }}" 
+                   class="query-link {% if qid == query_id %}active{% endif %}">
+                    {{ info.title }}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+
+        <section class="query-section">
+            <div class="query-header">
+                <div>
+                    <h2>{{ query_info.title }}</h2>
+                    <p class="query-description">{{ query_info.description }}</p>
+                </div>
+            </div>
+            
+            <div class="query-container">
+                <pre id="queryDisplay" class="code-block">{{ query_info.query }}</pre>
+            </div>
+            
+            <div class="execution-info">
+                <div class="execution-time">{{ execution_time }}s</div>
+            </div>
+        </section>
+
+        {% if subquery_results %}
+        <section class="subqueries-section">
+            <h2>Intermediate Results</h2>
+            {% for table, data in subquery_results.items() %}
+            <div class="subquery-item">
+                <div class="table-name">{{ table }}</div>
+                <pre class="code-block">{{ data.query }}</pre>
+                
+                <div class="table-wrapper">
+                    {% if data.total_rows > 10 %}
+                    <div class="results-count">{{ data.total_rows }} rows (showing first 10)</div>
+                    {% endif %}
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for col in data.columns %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data.results %}
+                            <tr>
+                                {% for col in data.columns %}
+                                <td>{{ row[col] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        {% if final_results %}
+        <section class="final-results-section">
+            <h2>Final Results</h2>
+            <div class="table-wrapper">
+                {% if final_results.total_rows > 10 %}
+                <div class="results-count">{{ final_results.total_rows }} rows (showing first 10)</div>
+                {% endif %}
+                <table>
+                    <thead>
+                        <tr>
+                            {% for col in final_results.columns %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in final_results.data %}
+                        <tr>
+                            {% for col in final_results.columns %}
+                            <td>{{ row[col] }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html> 
