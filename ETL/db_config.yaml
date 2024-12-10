@@ -1,0 +1,19 @@
+databases:
+  - name: DB1
+    host: YOUR_DB_HOST
+    port: "5432"
+    dbname: postgres
+    username: YOUR_DB_USERNAME
+    password: YOUR_DB_PASSWORD
+  - name: DB2
+    host: YOUR_DB_HOST
+    port: "5432"
+    dbname: postgres
+    username: YOUR_DB_USERNAME
+    password: YOUR_DB_PASSWORD
+  - name: DB3
+    host: YOUR_DB_HOST
+    port: "5432"
+    dbname: postgres
+    username: YOUR_DB_USERNAME
+    password: YOUR_DB_PASSWORD

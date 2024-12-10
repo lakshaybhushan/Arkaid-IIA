@@ -1,1 +1,0 @@
-cloudflared access tcp --hostname dakshpg.laksh.lol --url tcp://localhost:5432

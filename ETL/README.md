@@ -1,48 +1,127 @@
-Overview
-========
+# ETL Module
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+This module handles the Extract, Transform, Load (ETL) processes for the Arkaid project, managing data flow between different databases and creating materialized views for efficient analytics.
 
-Project Contents
-================
+## Overview
 
-Your Astro project contains the following files and folders:
+The ETL module is responsible for:
+- Extracting data from multiple sources
+- Transforming data into standardized formats
+- Loading data into appropriate databases
+- Creating and maintaining materialized views
+- Managing database connections and configurations
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+## Components
 
-Deploy Your Project Locally
-===========================
+### Database Connection Management
+- `db_connection.py`: Manages database connections
+- `db_config.yaml`: Configuration file for database connections
+- `.env.example`: Template for environment variables
 
-1. Start Airflow on your local machine by running 'astro dev start'.
+### ETL Processes
+- `etl_steam_games.py`: ETL process for Steam games data
+- `etl_epic_games.py`: ETL process for Epic games data
+- `etl_steam_players.py`: ETL process for Steam player data
+- `etl_epic_players.py`: ETL process for Epic player data
+- `etl_content_creators.py`: ETL process for content creator data
+- `etl_developers.py`: ETL process for developer data
+- `etl_modders.py`: ETL process for modder data
+- `etl_publishers.py`: ETL process for publisher data
 
-This command will spin up 4 Docker containers on your machine, each for a different Airflow component:
+### Materialized Views
+- `mv_games_warehouse.py`: Manages game-related materialized views
+- `mv_players_warehouse.py`: Manages player-related materialized views
 
-- Postgres: Airflow's Metadata Database
-- Webserver: The Airflow component responsible for rendering the Airflow UI
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+### Schema Management
+- `schema_matcher.py`: Handles schema matching between different data sources
+- `other_schema_matcher.py`: Additional schema matching functionality
+- `csv_data_sources.py`: Manages CSV data source configurations
 
-2. Verify that all 4 Docker containers were created by running 'docker ps'.
+## Directory Structure
 
-Note: Running 'astro dev start' will start your project with the Airflow Webserver exposed at port 8080 and Postgres exposed at port 5432. If you already have either of those ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+```
+ETL/
+├── data/                  # Data files directory
+├── mappings/             # Schema mapping configurations
+├── .env.example          # Environment variables template
+├── db_config.yaml        # Database configuration
+├── data_types.txt        # Data type definitions
+└── ETL process files     # Individual ETL scripts
+```
 
-3. Access the Airflow UI for your local Airflow project. To do so, go to http://localhost:8080/ and log in with 'admin' for both your Username and Password.
+## Configuration
 
-You should also be able to access your Postgres Database at 'localhost:5432/postgres'.
+1. Copy `.env.example` to `.env` and fill in database credentials:
+```bash
+cp .env.example .env
+```
 
-Deploy Your Project to Astronomer
-=================================
+2. Update `db_config.yaml` with appropriate database configurations:
+```yaml
+databases:
+  - name: DB1
+    host: your_host
+    port: "5432"
+    dbname: your_db
+    username: your_username
+    password: your_password
+```
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+## Usage
 
-Contact
-=======
+### Running ETL Processes
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+1. For Steam data:
+```bash
+python etl_steam_games.py
+python etl_steam_players.py
+```
+
+2. For Epic data:
+```bash
+python etl_epic_games.py
+python etl_epic_players.py
+```
+
+3. For other entities:
+```bash
+python etl_content_creators.py
+python etl_developers.py
+python etl_modders.py
+python etl_publishers.py
+```
+
+### Managing Materialized Views
+
+1. Create/update game-related views:
+```bash
+python mv_games_warehouse.py
+```
+
+2. Create/update player-related views:
+```bash
+python mv_players_warehouse.py
+```
+
+## Database Structure
+
+The ETL processes work with three main databases:
+1. DB1: Epic Games data
+2. DB2: Steam data
+3. DB3: Materialized views and consolidated data
+
+## Dependencies
+
+- Python 3.x
+- psycopg2
+- pandas
+- PyYAML
+- python-dotenv
+- SQLAlchemy
+
+## Notes
+
+- ETL processes include error handling and logging
+- Materialized views are automatically refreshed when source data changes
+- Schema matching ensures data consistency across different sources
+- All processes are designed to be idempotent

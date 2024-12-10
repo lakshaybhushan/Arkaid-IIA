@@ -1,11 +1,5 @@
-*.zip
-.DS_Store
-/bkup
-/datasets
-/oldmaybe
-/matchmatix
-ETL/data_sources
-arkaid_api/
-.venv
 __pycache__
-/old_data
+.DS_Store
+ETL/data_sources
+.venv
+.env
